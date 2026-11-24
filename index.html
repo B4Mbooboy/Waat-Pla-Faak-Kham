@@ -589,9 +589,8 @@
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ⚠️ นำค่าจาก Firebase ของโปรเจกต์ตัวเองมาใส่ที่นี่
-    
-    const firebaseConfig = {
-    apiKey: "AIzaSyCxI_MOZq6NEgAIW8lLyvTmjVOUlUAHqts",
+    const CUSTOM_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCxI_MOZq6NEgAIW8lLyvTmjVOUlUAHqts",
     authDomain: "aquariam.firebaseapp.com",
     projectId: "aquariam",
     storageBucket: "aquariam.firebasestorage.app",
@@ -599,7 +598,7 @@
     appId: "1:939623908480:web:711321fe507cb62ab45265",
     measurementId: "G-ZR3YKXWJ4B"
     };
-
+    
     /* =====================================================================
        1. ระบบเสียงใต้น้ำและฟองอากาศแบบสังเคราะห์ (Web Audio API)
        ===================================================================== */

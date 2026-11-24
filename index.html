@@ -1,0 +1,2968 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ปล่อยปลาลงสู่อควาเรียม — นิทรรศการ Paper-Cut Shadow Box</title>
+
+  <!-- โหลดฟอนต์ภาษาไทย Prompt (UI) และ Mali (ลายมือน่ารักสำหรับข้อความติดตัวปลา) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- โหลด Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'sans-serif'],
+            display: ['Prompt', 'sans-serif'],
+            hand: ['Mali', 'Prompt', 'sans-serif'],
+          },
+          colors: {
+            paper: {
+              cream: '#FAF6EE',
+              mint: '#D8EDE5',
+              mintDeep: '#CBE6DC',
+              seafoam: '#5BB8B0',
+              cerulean: '#2F98B8',
+              ocean: '#1E6F9F',
+              cobalt: '#184E77',
+              abyss: '#0E294B',
+              ink: '#142B44',
+              coral: '#E86F4A',
+              terracotta: '#D65A31',
+              peach: '#F2A679',
+            }
+          }
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ตั้งค่าหน้าจอเต็มสำหรับท้องทะเล Paper-Cut Shadow Box (รองรับ 100dvh บนมือถือ) */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background-color: #0E294B;
+      font-family: 'Prompt', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #oceanCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    /* Safe Area สำหรับมือถือที่มีรอยบาก (Notch) และแถบ Home Bar */
+    .safe-top {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .safe-bottom {
+      padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+    }
+
+    /* สไตล์แผ่นกระดาษคราฟต์ซ้อนเลเยอร์ (Paper-Cut Craft UI) */
+    .paper-card {
+      background-color: #FAF6EE;
+      background-image: radial-gradient(rgba(20, 43, 68, 0.035) 1px, transparent 0);
+      background-size: 14px 14px;
+      border: 2px solid #CBE6DC;
+      box-shadow:
+        0 4px 0 #2F98B8,
+        0 10px 24px rgba(14, 41, 75, 0.38);
+      color: #142B44;
+    }
+
+    .paper-modal {
+      background-color: #FAF6EE;
+      background-image: radial-gradient(rgba(47, 152, 184, 0.04) 1px, transparent 0);
+      background-size: 16px 16px;
+      border: 3px solid #CBE6DC;
+      box-shadow:
+        0 8px 0 #184E77,
+        0 24px 55px rgba(8, 22, 42, 0.68);
+      color: #142B44;
+    }
+
+    .paper-btn {
+      background-color: #FAF6EE;
+      border: 2px solid #CBE6DC;
+      box-shadow: 0 3px 0 #2F98B8, 0 6px 14px rgba(14, 41, 75, 0.25);
+      color: #142B44;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+    }
+    .paper-btn:hover {
+      background-color: #FFFFFF;
+    }
+    .paper-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 0px 0 #2F98B8, 0 2px 6px rgba(14, 41, 75, 0.22);
+    }
+
+    /* ปุ่มหลักสีส้มปะการัง (Coral CTA) แบบกระดาษซ้อนมิติ */
+    .paper-btn-coral {
+      background: linear-gradient(180deg, #EE7E5A 0%, #E86F4A 100%);
+      border: 2px solid #F9D2BF;
+      box-shadow: 0 5px 0 #A8401E, 0 12px 26px rgba(14, 41, 75, 0.44);
+      color: #FFFFFF;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease;
+    }
+    .paper-btn-coral:hover {
+      filter: brightness(1.05);
+    }
+    .paper-btn-coral:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #A8401E, 0 4px 10px rgba(14, 41, 75, 0.35);
+    }
+
+    /* ปุ่มสีฟ้าทะเล */
+    .paper-btn-ocean {
+      background: linear-gradient(180deg, #3AA7C7 0%, #2F98B8 100%);
+      border: 2px solid #CBE6DC;
+      box-shadow: 0 4px 0 #184E77, 0 8px 18px rgba(14, 41, 75, 0.28);
+      color: #FFFFFF;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .paper-btn-ocean:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #184E77, 0 3px 8px rgba(14, 41, 75, 0.22);
+    }
+
+    /* พื้นหลังพรีวิวจำลองท้องทะเล Paper-Cut */
+    .preview-ocean-bg {
+      background: linear-gradient(180deg, #5BB8B0 0%, #2F98B8 38%, #1E6F9F 72%, #184E77 100%);
+      box-shadow: inset 0 6px 20px rgba(14, 41, 75, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* สไลเดอร์สไตล์กระดาษคราฟต์ (หัวเลื่อนใหญ่ขึ้นเพื่อให้ลากด้วยนิ้วง่าย) */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #CBE6DC;
+      height: 12px;
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid #8CC6BC;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #E86F4A;
+      border: 3px solid #FAF6EE;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(14, 41, 75, 0.35);
+    }
+
+    /* แถบเลื่อนภายใน Modal */
+    .custom-scroll {
+      -webkit-overflow-scrolling: touch;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #D8EDE5;
+      border-radius: 10px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #5BB8B0;
+      border-radius: 10px;
+    }
+
+    /* โหมดนิทรรศการเต็มหน้าจอ */
+    body.exhibition-mode .hud-element {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-14px);
+    }
+    body.exhibition-mode .hud-bottom {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+    }
+    .hud-transition {
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    #exitExhibitionBtn {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    body.exhibition-mode #exitExhibitionBtn {
+      opacity: 0.45;
+      pointer-events: auto;
+    }
+    body.exhibition-mode #exitExhibitionBtn:hover,
+    body.exhibition-mode #exitExhibitionBtn:active {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- พื้นที่ท้องทะเล Paper-Cut Shadow Box เต็มหน้าจอ -->
+  <canvas id="oceanCanvas"></canvas>
+
+  <!-- แบนเนอร์ต้อนรับปลาตัวใหม่ -->
+  <div id="welcomeBanner" class="fixed top-24 sm:top-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none opacity-0 transition-all duration-500 scale-95 w-[92%] max-w-md">
+    <div class="paper-card rounded-2xl px-4 py-3 sm:px-6 sm:py-3.5 text-center border-2 border-[#E86F4A]/50">
+      <div class="text-[#2F98B8] text-[11px] sm:text-xs font-semibold tracking-wide mb-0.5">✦ ปลาตัวใหม่ว่ายลงสู่อควาเรียมแล้ว! ✦</div>
+      <div id="welcomeBannerText" class="text-[#142B44] font-display text-sm sm:text-lg font-bold"></div>
+      <div id="welcomeBannerMsg" class="text-[#1E6F9F] font-hand text-xs sm:text-sm mt-0.5 truncate"></div>
+    </div>
+  </div>
+
+  <!-- แถบแจ้งเตือนสั้นๆ -->
+  <div id="toastMessage" class="fixed bottom-28 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 w-max max-w-[90%]">
+    <div id="toastInner" class="paper-card rounded-full px-4 py-2 text-xs sm:text-sm font-medium text-[#142B44] text-center truncate"></div>
+  </div>
+
+  <!-- ปุ่มออกจากโหมดนิทรรศการ (มุมขวาบน) -->
+  <button id="exitExhibitionBtn" title="ออกจากโหมดนิทรรศการ" class="fixed top-4 right-4 z-50 paper-btn px-3.5 py-2 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1.5 cursor-pointer" style="margin-top: env(safe-area-inset-top);">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"/></svg>
+    <span>ออก</span>
+  </button>
+
+  <!-- แถบควบคุมด้านบน (Top HUD ปรับขนาดกะทัดรัดสำหรับมือถือ) -->
+  <header class="hud-element hud-transition fixed top-0 left-0 right-0 z-20 px-3 pb-2 sm:p-5 safe-top flex items-start sm:items-center justify-between gap-2 pointer-events-none">
+    <!-- ป้ายชื่อนิทรรศการ + สถานะเรียลไทม์ -->
+    <div class="paper-card rounded-2xl px-2.5 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2 sm:gap-3 pointer-events-auto max-w-[66%] sm:max-w-none">
+      <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#E86F4A] flex items-center justify-center shadow-[0_3px_0_#A8401E] shrink-0">
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[#FAF6EE]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.5 5C8.2 5 4.4 7.8 2.5 12c1.9 4.2 5.7 7 10 7 3.1 0 5.8-1.4 7.6-3.5L22 17V7l-1.9 1.5C18.3 6.4 15.6 5 12.5 5zm-3.8 8.3a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8z"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="font-display font-bold text-xs sm:text-base leading-tight text-[#142B44] truncate">ปล่อยปลาลงสู่อควาเรียม</h1>
+        <div class="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-[#1E6F9F] font-medium mt-0.5">
+          <span id="liveStatusDot" class="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-200 animate-pulse shrink-0"></span>
+          <span id="liveStatusText" class="truncate max-w-[95px] sm:max-w-none">กำลังเชื่อมต่อ...</span>
+          <span id="onlineUsersWrap" class="hidden items-center gap-1">
+            <span class="text-[#5BB8B0]">•</span>
+            <span><strong id="onlineUsersBadge" class="text-[#142B44] font-bold">1</strong> คน</span>
+          </span>
+          <span class="text-[#5BB8B0]">•</span>
+          <span><strong id="fishCountBadge" class="text-[#142B44] font-bold">0</strong> ตัว</span>
+          <button id="reconnectBtn" type="button" class="hidden ml-0.5 px-1.5 py-0.5 rounded-full bg-[#E86F4A] text-white text-[9px] sm:text-[10px] font-semibold cursor-pointer">ลองใหม่</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ปุ่มเครื่องมือด้านขวาบน (Touch target 40px+) -->
+    <div class="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
+      <button id="soundToggleBtn" class="paper-btn rounded-xl w-10 h-10 sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium cursor-pointer" title="เปิด/ปิดเสียงใต้น้ำและฟองอากาศ">
+        <span id="soundIconOff" class="flex items-center gap-1.5 text-[#5A758C]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+          <span class="hidden md:inline">เสียง: ปิด</span>
+        </span>
+        <span id="soundIconOn" class="hidden items-center gap-1.5 text-[#2F98B8]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+          <span class="hidden md:inline">เสียง: เปิด</span>
+        </span>
+      </button>
+
+      <button id="rosterBtn" class="paper-btn rounded-xl w-10 h-10 sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium cursor-pointer" title="ดูรายชื่อปลาและข้อความในอควาเรียม">
+        <svg class="w-5 h-5 text-[#2F98B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-6 4h8M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+        <span class="hidden sm:inline">สมุดปลา</span>
+      </button>
+
+      <button id="exhibitionBtn" class="paper-btn rounded-xl w-10 h-10 sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-medium cursor-pointer" title="โหมดนิทรรศการ (ซ่อนเมนู / เต็มจอ)">
+        <svg class="w-5 h-5 text-[#E86F4A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+        <span class="hidden sm:inline">โหมดนิทรรศการ</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- แถบควบคุมด้านล่าง (Bottom HUD รองรับนิ้วโป้งและ Safe Area) -->
+  <footer class="hud-bottom hud-transition fixed bottom-0 left-0 right-0 z-20 px-4 pt-2 sm:p-6 safe-bottom flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+    <div class="paper-card rounded-full px-3.5 py-1 sm:px-4 sm:py-1.5 text-[10px] sm:text-xs font-medium text-[#142B44] pointer-events-auto text-center">
+      แตะน้ำโปรยอาหาร 🫧 แตะตัวปลาเพื่อทักทาย
+    </div>
+
+    <!-- ปุ่มหลักสีส้มปะการัง -->
+    <button id="openScannerBtn" class="paper-btn-coral pointer-events-auto cursor-pointer font-display font-bold text-base sm:text-lg w-full sm:w-auto max-w-xs sm:max-w-none px-7 py-3.5 rounded-full flex items-center justify-center gap-2 shrink-0">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+      <span>ปล่อยปลาของคุณ</span>
+    </button>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL 1: สแกนจากกระดาษ / อัปโหลด / วาดบนหน้าจอ (Bottom Sheet บนมือถือ) -->
+  <!-- ======================================================================= -->
+  <div id="scannerModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-[#0E294B]/72 backdrop-blur-sm p-0 sm:p-4">
+    <div class="paper-modal rounded-t-3xl sm:rounded-3xl w-full max-w-3xl max-h-[92dvh] flex flex-col overflow-hidden border-b-0 sm:border-b-[3px]">
+
+      <!-- ส่วนหัว Modal -->
+      <div class="px-4 py-3.5 sm:px-5 sm:py-4 bg-[#D8EDE5] border-b-2 border-[#CBE6DC] flex items-center justify-between shrink-0">
+        <div class="min-w-0 pr-2">
+          <h2 class="font-display font-bold text-base sm:text-xl text-[#142B44] flex items-center gap-1.5 truncate">
+            <span>🐠</span>
+            <span id="modalTitle" class="truncate">ปล่อยปลาลงสู่อควาเรียม</span>
+          </h2>
+          <p id="modalSubtitle" class="text-[11px] sm:text-xs text-[#184E77] truncate">สแกนภาพวาดจากกระดาษ อัปโหลดรูป หรือวาดบนหน้าจอ</p>
+        </div>
+        <button id="closeScannerBtn" class="w-10 h-10 rounded-full bg-[#FAF6EE] hover:bg-white border-2 border-[#CBE6DC] flex items-center justify-center text-[#142B44] transition cursor-pointer shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- เนื้อหา Modal -->
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scroll flex-1 safe-bottom">
+
+        <!-- ขั้นตอนที่ 1: เลือกวิธีนำเข้าปลา -->
+        <div id="stepCapture">
+          <!-- แท็บเลือก 3 โหมด -->
+          <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4 bg-[#D8EDE5] p-1.5 rounded-2xl border-2 border-[#CBE6DC]">
+            <button data-tab="camera" class="tab-btn rounded-xl py-2.5 px-1.5 sm:px-2 text-[11px] sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer bg-[#2F98B8] text-white shadow-[0_2px_0_#184E77]">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg>
+              <span>สแกนกระดาษ</span>
+            </button>
+            <button data-tab="upload" class="tab-btn rounded-xl py-2.5 px-1.5 sm:px-2 text-[11px] sm:text-sm font-medium flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer text-[#142B44] hover:bg-white/60">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>อัปโหลดรูป</span>
+            </button>
+            <button data-tab="draw" class="tab-btn rounded-xl py-2.5 px-1.5 sm:px-2 text-[11px] sm:text-sm font-medium flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer text-[#142B44] hover:bg-white/60">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+              <span>วาดบนจอ</span>
+            </button>
+          </div>
+
+          <!-- (ก) โหมดกล้องสแกน -->
+          <div id="panelCamera" class="tab-panel">
+            <!-- ปุ่มถ่ายรูปด้วยกล้องมือถือโดยตรง (วางเด่นด้านบนสำหรับมือถือ) -->
+            <div class="mb-3">
+              <label for="nativeCameraInput" class="paper-btn-coral w-full py-3.5 px-4 rounded-2xl font-display font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer">
+                <span>📸 ถ่ายรูปด้วยกล้องมือถือโดยตรง</span>
+                <span class="text-[10px] sm:text-[11px] bg-white/25 text-white px-2 py-0.5 rounded-full">แนะนำ</span>
+              </label>
+              <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" class="hidden" />
+            </div>
+
+            <div class="relative rounded-2xl overflow-hidden bg-[#0E294B] aspect-[4/3] w-full flex items-center justify-center border-2 border-[#5BB8B0]">
+              <video id="cameraVideo" autoplay playsinline muted webkit-playsinline class="w-full h-full object-cover"></video>
+
+              <!-- หน้าจอเริ่มต้นกดขออนุญาตเปิดกล้องสด -->
+              <div id="cameraStartOverlay" class="absolute inset-0 bg-[#142B44]/92 p-4 flex flex-col items-center justify-center text-center z-10">
+                <div class="w-12 h-12 rounded-2xl bg-[#D8EDE5] text-[#1E6F9F] flex items-center justify-center mb-2.5 border-2 border-[#5BB8B0]">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <h3 class="font-display font-semibold text-sm sm:text-base text-[#FAF6EE] mb-1">หรือเปิดกล้องสแกนสดในหน้านี้</h3>
+                <p class="text-[11px] sm:text-xs text-[#D8EDE5] max-w-xs mb-3.5">วางภาพวาดปลาบนกระดาษสีขาวในที่มีแสงสว่าง</p>
+                <button id="requestCameraBtn" type="button" class="paper-btn-ocean px-5 py-2.5 rounded-xl font-display font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  <span id="requestCameraBtnText">เปิดกล้องสแกนสด</span>
+                </button>
+              </div>
+
+              <!-- กรอบเส้นประสำหรับวางกระดาษ -->
+              <div id="cameraGuideOverlay" class="hidden absolute inset-0 pointer-events-none flex-col items-center justify-center p-4 sm:p-6">
+                <div class="w-full h-full max-w-[88%] max-h-[80%] border-2 border-dashed border-[#FAF6EE] rounded-2xl flex flex-col items-center justify-between p-2.5 bg-[#5BB8B0]/10">
+                  <span class="bg-[#142B44]/85 text-[#FAF6EE] text-[11px] sm:text-xs px-3 py-1 rounded-full">วางภาพวาดปลาให้อยู่ในกรอบ</span>
+                  <span class="bg-[#142B44]/85 text-[#D8EDE5] text-[10px] sm:text-[11px] px-3 py-1 rounded-full">แสงสว่างจะช่วยให้ตัดพื้นหลังเนียนที่สุด</span>
+                </div>
+              </div>
+
+              <!-- ข้อความแจ้งเตือนกรณีเปิดกล้องสดไม่ได้ -->
+              <div id="cameraErrorBox" class="hidden absolute inset-0 bg-[#0E294B]/95 p-4 flex-col items-center justify-center text-center z-20">
+                <div class="w-11 h-11 rounded-full bg-[#E86F4A]/25 text-[#F2A679] flex items-center justify-center mb-2">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <h3 id="cameraErrorTitle" class="font-display font-semibold text-sm sm:text-base text-[#FAF6EE] mb-1">ไม่สามารถเปิดกล้องสดได้</h3>
+                <p id="cameraErrorText" class="text-[11px] sm:text-xs text-[#D8EDE5] max-w-sm mb-3 leading-relaxed">คุณสามารถกดปุ่ม "📸 ถ่ายรูปด้วยกล้องมือถือโดยตรง" ด้านบนได้เลยครับ</p>
+                <button id="retryCameraBtn" type="button" class="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-medium cursor-pointer">ลองขอสิทธิ์กล้องอีกครั้ง</button>
+              </div>
+            </div>
+
+            <!-- ปุ่มควบคุมกล้องสด -->
+            <div id="liveCameraControls" class="hidden mt-3 items-center justify-center gap-2.5">
+              <button id="flipCameraBtn" type="button" class="paper-btn px-3.5 py-3 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-1.5 cursor-pointer" title="สลับกล้องหน้า/หลัง">
+                <svg class="w-5 h-5 text-[#2F98B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span>สลับกล้อง</span>
+              </button>
+              <button id="capturePhotoBtn" type="button" class="paper-btn-coral flex-1 py-3 px-5 rounded-xl font-display font-semibold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+                <span>ถ่ายภาพสแกนปลา</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- (ข) โหมดอัปโหลดรูปภาพ -->
+          <div id="panelUpload" class="tab-panel hidden">
+            <label for="fileUploadInput" class="border-2 border-dashed border-[#2F98B8] hover:border-[#1E6F9F] bg-[#D8EDE5]/70 hover:bg-[#D8EDE5] transition rounded-2xl p-7 sm:p-12 flex flex-col items-center justify-center text-center cursor-pointer">
+              <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#FAF6EE] border-2 border-[#CBE6DC] text-[#2F98B8] flex items-center justify-center mb-3.5 shadow-sm">
+                <svg class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <div class="font-display font-bold text-base sm:text-lg text-[#142B44] mb-1">แตะเพื่อเลือกรูปภาพปลาจากเครื่อง</div>
+              <p class="text-xs sm:text-sm text-[#184E77] max-w-md">รองรับรูปถ่ายภาพวาดบนกระดาษสีขาว (JPG, PNG) ระบบจะตัดพื้นหลังกระดาษออกให้อัตโนมัติ</p>
+              <span class="mt-4 paper-btn-ocean px-6 py-2.5 rounded-xl text-sm font-semibold">เลือกไฟล์รูปภาพ</span>
+              <input id="fileUploadInput" type="file" accept="image/*" class="hidden" />
+            </label>
+          </div>
+
+          <!-- (ค) โหมดวาดบนหน้าจอ (ปรับขนาดกระดานและปุ่มสีให้ใช้นิ้ววาดถนัด) -->
+          <div id="panelDraw" class="tab-panel hidden">
+            <div class="flex flex-col gap-3">
+              <!-- แถบจานสีและเครื่องมือ -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-[#D8EDE5] p-2.5 rounded-2xl border-2 border-[#CBE6DC]">
+                <div id="colorPalette" class="flex items-center justify-between sm:justify-start gap-1.5 overflow-x-auto pb-0.5 sm:pb-0"></div>
+                <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+                  <div class="flex items-center gap-2 bg-[#FAF6EE] px-2.5 py-1.5 rounded-xl border border-[#CBE6DC] flex-1 sm:flex-initial">
+                    <span class="text-[11px] font-medium text-[#184E77] shrink-0">ขนาด</span>
+                    <input id="brushSizeSlider" type="range" min="3" max="28" value="11" class="w-full sm:w-20" />
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button id="eraserBtn" type="button" class="px-3 py-2 rounded-xl bg-[#FAF6EE] border border-[#CBE6DC] text-xs font-medium text-[#142B44] cursor-pointer">ยางลบ</button>
+                    <button id="undoDrawBtn" type="button" class="px-3 py-2 rounded-xl bg-[#FAF6EE] border border-[#CBE6DC] text-xs font-medium text-[#142B44] cursor-pointer">ย้อนกลับ</button>
+                    <button id="clearDrawBtn" type="button" class="px-3 py-2 rounded-xl bg-[#FFE5DC] border border-[#F2A679] text-[#B83B1A] text-xs font-medium cursor-pointer">ล้าง</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- กระดานวาดรูป (4:3 บนมือถือเพื่อพื้นที่วาดแนวตั้งที่มากขึ้น) -->
+              <div class="relative rounded-2xl overflow-hidden bg-white border-2 border-[#5BB8B0] shadow-inner aspect-[4/3] sm:aspect-[16/10] w-full touch-none">
+                <svg id="drawGuideSvg" class="absolute inset-0 w-full h-full pointer-events-none opacity-25" viewBox="0 0 400 250" preserveAspectRatio="xMidYMid meet">
+                  <path d="M115,125 C148,60 245,58 298,125 C245,192 148,190 115,125 Z" fill="none" stroke="#2F98B8" stroke-width="2.5" stroke-dasharray="6,6"/>
+                  <path d="M118,125 L66,82 L78,125 L66,168 Z" fill="none" stroke="#2F98B8" stroke-width="2.5" stroke-dasharray="6,6"/>
+                  <path d="M185,78 Q210,45 235,78" fill="none" stroke="#2F98B8" stroke-width="2" stroke-dasharray="5,5"/>
+                  <circle cx="258" cy="112" r="7" fill="none" stroke="#2F98B8" stroke-width="2"/>
+                  <text x="200" y="232" text-anchor="middle" fill="#1E6F9F" font-size="13" font-family="Prompt">วาดปลาของคุณ (หันหัวไปทางขวา)</text>
+                </svg>
+                <canvas id="drawCanvas" class="w-full h-full block cursor-crosshair touch-none"></canvas>
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <label class="flex items-center gap-2 text-xs text-[#184E77] font-medium cursor-pointer py-1">
+                  <input id="toggleGuideCheck" type="checkbox" checked class="accent-[#2F98B8] w-4 h-4 rounded" />
+                  <span>เส้นร่างช่วยวาด</span>
+                </label>
+                <button id="useDrawingBtn" type="button" class="paper-btn-coral py-3 px-6 rounded-xl font-display font-semibold text-sm sm:text-base cursor-pointer">
+                  ใช้ภาพวาดนี้ ➔
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ขั้นตอนที่ 2: ตัดพื้นหลัง พรีวิว ตั้งชื่อ และฝากข้อความ -->
+        <div id="stepProcess" class="hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+
+            <!-- ฝั่งซ้าย: พรีวิว + ปรับตัดพื้นหลัง -->
+            <div class="flex flex-col gap-3">
+              <div class="preview-ocean-bg rounded-2xl aspect-[16/10] sm:aspect-[4/3] w-full border-2 border-[#CBE6DC] flex flex-col items-center justify-center p-4">
+                <canvas id="previewCanvas" class="relative z-10 max-w-full max-h-full object-contain drop-shadow-[6px_10px_8px_rgba(14,41,75,0.55)]"></canvas>
+                <div class="absolute bottom-2 right-2.5 z-20 bg-[#FAF6EE]/95 text-[#142B44] text-[10px] sm:text-[11px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 border border-[#CBE6DC] shadow">
+                  <span>หัวปลาหันขวา</span>
+                  <span class="text-[#E86F4A] font-bold">➔</span>
+                </div>
+              </div>
+
+              <button id="flipFishBtn" type="button" class="paper-btn w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer">
+                <svg class="w-4 h-4 text-[#2F98B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                <span>กลับด้านหัวปลา (ซ้าย ↔ ขวา)</span>
+              </button>
+
+              <!-- สไลเดอร์ปรับความเนียนในการตัดกระดาษ -->
+              <div class="bg-[#D8EDE5] rounded-2xl p-3.5 border-2 border-[#CBE6DC]">
+                <div class="flex items-center justify-between text-xs sm:text-sm mb-2">
+                  <span class="text-[#142B44] font-semibold">ความเนียนในการตัดพื้นหลัง</span>
+                  <span id="thresholdValueLabel" class="text-[#D65A31] font-bold">38</span>
+                </div>
+                <input id="thresholdSlider" type="range" min="5" max="90" value="38" class="w-full" />
+                <div class="flex items-center justify-between mt-3">
+                  <label class="flex items-center gap-2 text-xs text-[#184E77] font-medium cursor-pointer">
+                    <input id="keepInnerWhiteCheck" type="checkbox" checked class="accent-[#2F98B8] w-4 h-4 rounded" />
+                    <span>เก็บสีขาวด้านในตัวปลา (เช่น ตา/แถบสีขาว)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- ฝั่งขวา: ข้อมูลปลาและข้อความ (ใช้ text-base บนมือถือเพื่อกัน iOS ซูมจอ) -->
+            <div class="flex flex-col justify-between gap-3.5">
+              <div class="flex flex-col gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label for="fishNameInput" class="block text-xs font-semibold text-[#142B44] mb-1">ชื่อปลาของคุณ</label>
+                    <input id="fishNameInput" type="text" maxlength="20" placeholder="เช่น น้องนีโม่" class="w-full rounded-xl bg-white border-2 border-[#CBE6DC] focus:border-[#2F98B8] focus:outline-none px-3 py-2.5 text-[#142B44] placeholder-[#89A5B2] text-base sm:text-sm" />
+                  </div>
+                  <div>
+                    <label for="artistNameInput" class="block text-xs font-semibold text-[#142B44] mb-1">ชื่อผู้วาด (ไม่บังคับ)</label>
+                    <input id="artistNameInput" type="text" maxlength="20" placeholder="เช่น น้องมิ้นท์" class="w-full rounded-xl bg-white border-2 border-[#CBE6DC] focus:border-[#2F98B8] focus:outline-none px-3 py-2.5 text-[#142B44] placeholder-[#89A5B2] text-base sm:text-sm" />
+                  </div>
+                </div>
+
+                <!-- ช่องเขียนข้อความฝากถึงอควาเรียม -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label for="fishMessageInput" class="block text-xs font-semibold text-[#142B44]">💌 ข้อความฝากถึงอควาเรียม</label>
+                    <span id="msgCharCount" class="text-[11px] text-[#1E6F9F] font-medium">0/100</span>
+                  </div>
+                  <textarea id="fishMessageInput" rows="2" maxlength="100" placeholder="เขียนคำอธิษฐาน หรือคำทักทาย..." class="w-full rounded-xl bg-white border-2 border-[#CBE6DC] focus:border-[#2F98B8] focus:outline-none px-3.5 py-2.5 text-[#142B44] placeholder-[#89A5B2] text-base sm:text-sm font-hand resize-none leading-relaxed"></textarea>
+                </div>
+
+                <!-- เลือกขนาดตัวปลา -->
+                <div>
+                  <label class="block text-xs font-semibold text-[#142B44] mb-1.5">ขนาดตัวปลาในอควาเรียม</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-size="small" class="size-option-btn py-2.5 rounded-xl bg-white border-2 border-[#CBE6DC] text-xs font-medium text-[#142B44] cursor-pointer">🐟 ตัวเล็ก</button>
+                    <button type="button" data-size="medium" class="size-option-btn py-2.5 rounded-xl bg-[#2F98B8] border-2 border-[#184E77] text-xs font-semibold text-white cursor-pointer">🐠 ตัวกลาง</button>
+                    <button type="button" data-size="large" class="size-option-btn py-2.5 rounded-xl bg-white border-2 border-[#CBE6DC] text-xs font-medium text-[#142B44] cursor-pointer">🐡 ตัวใหญ่</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ปุ่มปล่อยปลาลงอควาเรียม -->
+              <div class="flex flex-col gap-2 pt-1">
+                <button id="releaseFishBtn" type="button" class="paper-btn-coral w-full py-3.5 px-6 rounded-2xl font-display font-bold text-base sm:text-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60">
+                  <span id="releaseBtnLabel">🌊 ปล่อยปลาลงสู่อควาเรียม!</span>
+                </button>
+                <button id="backToCaptureBtn" type="button" class="w-full py-2.5 px-4 rounded-xl text-[#184E77] hover:bg-[#D8EDE5] text-xs sm:text-sm font-medium transition cursor-pointer">
+                  ← กลับไปถ่ายรูป / วาดใหม่
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- MODAL 2: สมุดรายชื่อปลาและข้อความในอควาเรียม (Bottom Sheet บนมือถือ) -->
+  <!-- ======================================================================= -->
+  <div id="rosterModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-[#0E294B]/72 backdrop-blur-sm p-0 sm:p-4">
+    <div class="paper-modal rounded-t-3xl sm:rounded-3xl w-full max-w-xl max-h-[85dvh] flex flex-col overflow-hidden border-b-0 sm:border-b-[3px]">
+      <div class="px-4 py-3.5 sm:px-5 sm:py-4 bg-[#D8EDE5] border-b-2 border-[#CBE6DC] flex items-center justify-between">
+        <div>
+          <h2 class="font-display font-bold text-base sm:text-lg text-[#142B44]">📖 สมุดปลาและข้อความ</h2>
+          <p class="text-[11px] sm:text-xs text-[#184E77]">แตะที่รายการเพื่อเรียกน้องปลาว่ายมาใกล้ๆ</p>
+        </div>
+        <button id="closeRosterBtn" class="w-10 h-10 rounded-full bg-[#FAF6EE] hover:bg-white border-2 border-[#CBE6DC] flex items-center justify-center text-[#142B44] transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="rosterList" class="p-3.5 sm:p-4 overflow-y-auto custom-scroll flex-1 flex flex-col gap-2.5"></div>
+
+      <div class="px-4 py-3 sm:px-5 bg-[#D8EDE5] border-t-2 border-[#CBE6DC] flex flex-col gap-1 safe-bottom">
+        <div class="flex items-center justify-between gap-2">
+          <span id="rosterSyncNote" class="text-[11px] sm:text-xs text-[#184E77] font-medium truncate">กำลังเชื่อมต่อโหมดออนไลน์...</span>
+          <span id="rosterTotalText" class="text-xs font-bold text-[#142B44] shrink-0">ทั้งหมด 0 ตัว</span>
+        </div>
+        <div class="text-[10px] text-[#1E6F9F] truncate">
+          รหัสผู้เข้าชม: <span id="myUserIdDisplay" class="font-mono font-semibold text-[#142B44]">กำลังเชื่อมต่อ...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- สคริปต์หลัก (Firebase Real-time + Side-View Ocean Paper-Cut Diorama Engine) -->
+  <!-- ======================================================================= -->
+  <script type="module">
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ⚠️ นำค่าจาก Firebase ของโปรเจกต์ตัวเองมาใส่ที่นี่
+    const CUSTOM_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCxI_MOZq6NEgAIW8LLyvTmjV0ULUAHqts",
+      authDomain: "aquariam.firebaseapp.com",
+      projectId: "aquariam",
+      storageBucket: "aquariam.firebasestorage.app",
+      messagingSenderId: "939623908480",
+      appId: "1:939623908480:web:711321fe507cb62ab45265",
+      measurementId: "G-ZR3YKXWJ4B"
+    };
+
+    /* =====================================================================
+       1. ระบบเสียงใต้น้ำและฟองอากาศแบบสังเคราะห์ (Web Audio API)
+       ===================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.enabled = false;
+        this.ctx = null;
+        this.ambientTimer = null;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      toggle() {
+        this.enabled = !this.enabled;
+        if (this.enabled) {
+          this.ensureContext();
+          this.playBubblePlop(0.14);
+          this.startAmbientLoop();
+        } else {
+          this.stopAmbientLoop();
+        }
+        return this.enabled;
+      }
+
+      startAmbientLoop() {
+        this.stopAmbientLoop();
+        this.ambientTimer = setInterval(() => {
+          if (this.enabled && Math.random() < 0.65) {
+            this.playBubblePlop(0.05 + Math.random() * 0.05);
+          }
+        }, 2400);
+      }
+
+      stopAmbientLoop() {
+        if (this.ambientTimer) {
+          clearInterval(this.ambientTimer);
+          this.ambientTimer = null;
+        }
+      }
+
+      playBubblePlop(volume = 0.1) {
+        if (!this.enabled) return;
+        try {
+          this.ensureContext();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const baseFreq = 260 + Math.random() * 240;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.9, now + 0.14);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(volume, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.17);
+        } catch (e) {}
+      }
+
+      playReleaseSplash() {
+        if (!this.enabled) return;
+        [0, 90, 190, 310].forEach((delay, idx) => {
+          setTimeout(() => this.playBubblePlop(0.12 - idx * 0.02), delay);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* =====================================================================
+       2. สร้างปลาทะเลตัวอย่าง 5 ตัว สไตล์ภาพวาดกระดาษตัดมุมมองด้านข้าง
+       ===================================================================== */
+    function createPaperCutOceanSampleFishes() {
+      const makeCanvas = (drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = 250;
+        c.height = 175;
+        const ctx = c.getContext('2d');
+        drawFn(ctx);
+        return c.toDataURL('image/png');
+      };
+
+      const clownfishUrl = makeCanvas((ctx) => {
+        ctx.fillStyle = '#D65A31';
+        ctx.beginPath();
+        ctx.moveTo(108, 60);
+        ctx.quadraticCurveTo(155, 22, 195, 58);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(125, 118);
+        ctx.quadraticCurveTo(150, 146, 178, 118);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#E86F4A';
+        ctx.beginPath();
+        ctx.moveTo(74, 88);
+        ctx.quadraticCurveTo(28, 48, 22, 88);
+        ctx.quadraticCurveTo(28, 128, 74, 88);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(152, 88, 82, 46, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#E86F4A';
+        ctx.fill();
+        ctx.clip();
+
+        const drawStripe = (cx, w) => {
+          ctx.fillStyle = '#142B44';
+          ctx.fillRect(cx - w / 2 - 3, 25, w + 6, 130);
+          ctx.fillStyle = '#FAF6EE';
+          ctx.fillRect(cx - w / 2, 25, w, 130);
+        };
+        drawStripe(100, 15);
+        drawStripe(150, 20);
+        drawStripe(198, 14);
+        ctx.restore();
+
+        ctx.fillStyle = '#F2A679';
+        ctx.beginPath();
+        ctx.ellipse(164, 102, 18, 11, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.arc(214, 80, 7.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.arc(216, 80, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const blueTangUrl = makeCanvas((ctx) => {
+        ctx.fillStyle = '#F4C95D';
+        ctx.beginPath();
+        ctx.moveTo(76, 88);
+        ctx.lineTo(24, 54);
+        ctx.quadraticCurveTo(38, 88, 24, 122);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(68, 88);
+        ctx.bezierCurveTo(105, 34, 205, 36, 236, 90);
+        ctx.bezierCurveTo(205, 142, 105, 144, 68, 88);
+        ctx.closePath();
+        ctx.fillStyle = '#2F98B8';
+        ctx.fill();
+        ctx.clip();
+
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.moveTo(80, 75);
+        ctx.bezierCurveTo(130, 42, 195, 50, 215, 76);
+        ctx.bezierCurveTo(180, 95, 130, 95, 80, 75);
+        ctx.fill();
+
+        ctx.fillStyle = '#5BB8B0';
+        ctx.beginPath();
+        ctx.ellipse(158, 108, 42, 16, -0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = '#F4C95D';
+        ctx.beginPath();
+        ctx.moveTo(165, 96);
+        ctx.quadraticCurveTo(145, 122, 128, 108);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.arc(212, 82, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.arc(214, 82, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const butterflyUrl = makeCanvas((ctx) => {
+        ctx.fillStyle = '#F2A679';
+        ctx.beginPath();
+        ctx.moveTo(95, 72);
+        ctx.quadraticCurveTo(142, 14, 196, 58);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(98, 104);
+        ctx.quadraticCurveTo(142, 158, 194, 114);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.moveTo(76, 88);
+        ctx.lineTo(30, 62);
+        ctx.lineTo(36, 88);
+        ctx.lineTo(30, 114);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(68, 88);
+        ctx.quadraticCurveTo(145, 22, 232, 88);
+        ctx.quadraticCurveTo(145, 154, 68, 88);
+        ctx.closePath();
+        ctx.fillStyle = '#F6CE64';
+        ctx.fill();
+        ctx.clip();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.fillRect(118, 20, 26, 140);
+        ctx.fillStyle = '#142B44';
+        ctx.fillRect(194, 20, 15, 140);
+        ctx.restore();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.arc(202, 82, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.arc(203, 82, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const pufferUrl = makeCanvas((ctx) => {
+        ctx.fillStyle = '#F2A679';
+        ctx.beginPath();
+        ctx.moveTo(84, 92);
+        ctx.lineTo(40, 68);
+        ctx.quadraticCurveTo(50, 92, 40, 116);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(152, 92, 72, 54, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#F2A679';
+        ctx.fill();
+        ctx.clip();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.ellipse(156, 128, 72, 32, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#D65A31';
+        [
+          [116, 68, 8], [142, 58, 10], [170, 64, 7],
+          [128, 84, 7], [156, 80, 9], [184, 76, 6]
+        ].forEach(([x, y, r]) => {
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.ellipse(148, 102, 16, 10, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FAF6EE';
+        ctx.beginPath();
+        ctx.arc(202, 82, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.arc(204, 82, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#142B44';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(224, 98, 5, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+      });
+
+      const angelUrl = makeCanvas((ctx) => {
+        ctx.fillStyle = '#5BB8B0';
+        ctx.beginPath();
+        ctx.moveTo(165, 58);
+        ctx.quadraticCurveTo(105, 8, 56, 24);
+        ctx.quadraticCurveTo(96, 56, 98, 84);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(165, 118);
+        ctx.quadraticCurveTo(105, 168, 56, 152);
+        ctx.quadraticCurveTo(96, 120, 98, 92);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#D8EDE5';
+        ctx.beginPath();
+        ctx.moveTo(86, 88);
+        ctx.lineTo(36, 66);
+        ctx.lineTo(48, 88);
+        ctx.lineTo(36, 110);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(80, 88);
+        ctx.quadraticCurveTo(148, 36, 224, 88);
+        ctx.quadraticCurveTo(148, 140, 80, 88);
+        ctx.closePath();
+        ctx.fillStyle = '#FAF6EE';
+        ctx.fill();
+        ctx.clip();
+
+        ctx.fillStyle = '#1E6F9F';
+        ctx.fillRect(114, 30, 16, 120);
+        ctx.fillStyle = '#5BB8B0';
+        ctx.fillRect(156, 30, 18, 120);
+        ctx.restore();
+
+        ctx.fillStyle = '#142B44';
+        ctx.beginPath();
+        ctx.arc(198, 83, 4.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      return [
+        {
+          id: 'sample_ocean_clown',
+          name: 'น้องส้มปะการัง',
+          author: 'นิทรรศการอควาเรียม',
+          message: 'ยินดีต้อนรับสู่อควาเรียมกระดาษตัด ขอให้ท้องทะเลไทยใสสะอาดตลอดไปนะ 🌊',
+          size: 'medium',
+          depthLayer: 2,
+          imageData: clownfishUrl,
+          isSample: true,
+          createdAt: 0,
+        },
+        {
+          id: 'sample_ocean_tang',
+          name: 'ดอรี่สีคราม',
+          author: 'นิทรรศการอควาเรียม',
+          message: 'ลองวาดปลาลงกระดาษแล้วสแกนปล่อยลงสู่อควาเรียมดูสิ ข้อความจะผลัดกันลอยขึ้นมาให้ทุกคนอ่าน ✨',
+          size: 'large',
+          depthLayer: 1,
+          imageData: blueTangUrl,
+          isSample: true,
+          createdAt: 0,
+        },
+        {
+          id: 'sample_ocean_butterfly',
+          name: 'ผีเสื้อแดดอุ่น',
+          author: 'นิทรรศการอควาเรียม',
+          message: 'ว่ายเล่นท่ามกลางปะการังกระดาษตัดมีความสุขจังเลย 💛',
+          size: 'medium',
+          depthLayer: 2,
+          imageData: butterflyUrl,
+          isSample: true,
+          createdAt: 0,
+        },
+        {
+          id: 'sample_ocean_puffer',
+          name: 'ปุ๊กปิ๊กคอรัล',
+          author: 'นิทรรศการอควาเรียม',
+          message: 'แตะน้ำเพื่อโปรยอาหารให้พวกเราได้นะ งั่มๆ 🫧',
+          size: 'small',
+          depthLayer: 0,
+          imageData: pufferUrl,
+          isSample: true,
+          createdAt: 0,
+        },
+        {
+          id: 'sample_ocean_angel',
+          name: 'เทวดามิ้นต์',
+          author: 'นิทรรศการอควาเรียม',
+          message: 'ขอให้วันนี้เป็นวันที่สดใสเหมือนแสงแดดส่องผิวน้ำนะ 🌿',
+          size: 'medium',
+          depthLayer: 1,
+          imageData: angelUrl,
+          isSample: true,
+          createdAt: 0,
+        },
+      ];
+    }
+
+    /* =====================================================================
+       3. คลาสปลาทะเลแนวนอน (OceanFishEntity) ปรับสเกลอัตโนมัติสำหรับจอมือถือ
+       ===================================================================== */
+    class OceanFishEntity {
+      constructor(data, worldW, worldH, isNewArrival = false) {
+        this.id = data.id;
+        this.name = data.name || 'ปลานิรนาม';
+        this.author = data.author || 'ผู้เข้าชมนิทรรศการ';
+        this.message = (data.message || '').trim();
+        this.size = data.size || 'medium';
+        this.isSample = Boolean(data.isSample);
+        this.createdAt = data.createdAt || Date.now();
+        this.imageData = data.imageData;
+
+        this.depthLayer = typeof data.depthLayer === 'number'
+          ? data.depthLayer
+          : Math.floor(Math.random() * 3);
+
+        const sizeMap = { small: 0.72, medium: 1.0, large: 1.28 };
+        const depthScaleMap = [0.76, 0.92, 1.08];
+        this.baseScale = (sizeMap[this.size] || 1.0) * depthScaleMap[this.depthLayer];
+
+        const safeW = Math.max(worldW || 1000, 320);
+        const safeH = Math.max(worldH || 700, 320);
+
+        this.facing = Math.random() < 0.5 ? 1 : -1;
+        this.x = isNewArrival
+          ? safeW * (0.28 + Math.random() * 0.44)
+          : safeW * (0.1 + Math.random() * 0.8);
+        this.y = isNewArrival
+          ? safeH * 0.18
+          : safeH * (0.22 + Math.random() * 0.52);
+
+        this.baseSpeed = (0.55 + Math.random() * 0.65) * (0.85 + this.depthLayer * 0.14);
+        this.vx = this.facing * this.baseSpeed;
+        this.vy = isNewArrival ? 2.4 : (Math.random() - 0.5) * 0.25;
+        this.angle = 0;
+
+        this.phase = Math.random() * Math.PI * 2;
+        this.swimFreq = 0.08 + Math.random() * 0.04;
+        this.boostTimer = isNewArrival ? 75 : 0;
+        this.arrivalGlow = isNewArrival ? 1.0 : 0;
+        this.wanderTimer = 80 + Math.random() * 140;
+        this.targetY = safeH * (0.22 + Math.random() * 0.50);
+
+        this.noteOpacity = 0;
+        this.pinnedTimer = isNewArrival && this.message ? 340 : 0;
+
+        this.img = new Image();
+        this.loaded = false;
+        this.drawW = 110 * this.baseScale;
+        this.drawH = 78 * this.baseScale;
+
+        this.img.onload = () => {
+          this.loaded = true;
+          this.recalcSize(safeW);
+        };
+        this.img.src = data.imageData;
+      }
+
+      recalcSize(worldW) {
+        if (!this.loaded || !this.img) return;
+        // ปรับขนาดปลาให้เล็กลงเมื่ออยู่บนจอมือถือ (ป้องกันการแออัดซ้อนทับกัน)
+        const mobileFactor = worldW < 640 ? 0.55 : 1.0; 
+        const maxDim = 132 * this.baseScale * mobileFactor;
+        const ratio = this.img.width / Math.max(1, this.img.height);
+        if (ratio >= 1) {
+          this.drawW = maxDim;
+          this.drawH = maxDim / ratio;
+        } else {
+          this.drawH = maxDim;
+          this.drawW = maxDim * ratio;
+        }
+      }
+
+      greet(fromUserTap = false) {
+        this.boostTimer = 55;
+        if (fromUserTap) {
+          this.pinnedTimer = 320;
+        }
+        sound.playBubblePlop(0.11);
+      }
+
+      update(worldW, worldH, foods, time) {
+        if (worldW <= 0 || worldH <= 0) return;
+
+        const minY = worldH * 0.18;
+        const maxY = worldH * 0.75;
+
+        if (this.boostTimer > 0) this.boostTimer--;
+        if (this.arrivalGlow > 0) this.arrivalGlow = Math.max(0, this.arrivalGlow - 0.012);
+        if (this.pinnedTimer > 0) this.pinnedTimer--;
+
+        let nearestFood = null;
+        let nearestDist = 260;
+        for (const f of foods) {
+          if (f.eaten) continue;
+          const d = Math.hypot(f.x - this.x, f.y - this.y);
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearestFood = f;
+          }
+        }
+
+        const speedMult = this.boostTimer > 0 ? 1.85 : 1.0;
+
+        if (nearestFood) {
+          const dx = nearestFood.x - this.x;
+          const dy = nearestFood.y - this.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const desiredVx = (dx / dist) * this.baseSpeed * 2.1;
+          const desiredVy = (dy / dist) * this.baseSpeed * 2.1;
+          this.vx += (desiredVx - this.vx) * 0.06;
+          this.vy += (desiredVy - this.vy) * 0.06;
+
+          if (dist < 28) {
+            nearestFood.eaten = true;
+            this.boostTimer = 35;
+            sound.playBubblePlop(0.09);
+          }
+        } else {
+          this.wanderTimer--;
+          if (this.wanderTimer <= 0) {
+            this.wanderTimer = 110 + Math.random() * 190;
+            this.targetY = minY + Math.random() * (maxY - minY);
+            if (Math.random() < 0.22) {
+              this.facing *= -1;
+            }
+          }
+
+          const desiredVx = this.facing * this.baseSpeed * speedMult;
+          const desiredVy = ((this.targetY - this.y) * 0.008) + Math.sin(time * 0.0015 + this.phase) * 0.22;
+
+          this.vx += (desiredVx - this.vx) * 0.035;
+          this.vy += (desiredVy - this.vy) * 0.04;
+        }
+
+        if (Math.abs(this.vx) > 0.15) {
+          this.facing = this.vx >= 0 ? 1 : -1;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // แก้ปัญหาปลาว่ายไปชนกระจุกรวมกันบนมือถือ
+        const marginX = Math.min(worldW * 0.05, 40); 
+        const pushForce = worldW < 640 ? 0.25 : 0.12; 
+
+        if (this.x < marginX) {
+          this.facing = 1;
+          this.vx += pushForce;
+        } else if (this.x > worldW - marginX) {
+          this.facing = -1;
+          this.vx -= pushForce;
+        }
+
+        // ป้องกันบั๊กปลาหลุดออกนอกจอ (สาเหตุหลักที่ปลาจะไปกระจุกที่จุดเดียว)
+        if (this.x < -this.drawW) this.x = marginX + (Math.random() * 20);
+        if (this.x > worldW + this.drawW) this.x = worldW - marginX - (Math.random() * 20);
+
+        if (this.y < minY) {
+          this.y = minY;
+          this.vy = Math.abs(this.vy) * 0.5;
+        } else if (this.y > maxY) {
+          this.y = maxY;
+          this.vy = -Math.abs(this.vy) * 0.5;
+        }
+
+        const targetAngle = Math.max(-0.34, Math.min(0.34, this.vy * 0.18 * this.facing));
+        this.angle += (targetAngle - this.angle) * 0.08;
+
+        this.phase += this.swimFreq * (this.boostTimer > 0 ? 1.85 : 1.0);
+      }
+
+      drawFish(ctx) {
+        if (!this.loaded || !this.img || this.img.width <= 0 || this.img.height <= 0) return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if (this.arrivalGlow > 0.01) {
+          const glowR = Math.max(this.drawW, this.drawH) * 0.72;
+          const g = ctx.createRadialGradient(0, 0, glowR * 0.1, 0, 0, glowR);
+          g.addColorStop(0, `rgba(250, 246, 238, ${this.arrivalGlow * 0.65})`);
+          g.addColorStop(0.5, `rgba(91, 184, 176, ${this.arrivalGlow * 0.35})`);
+          g.addColorStop(1, 'rgba(91, 184, 176, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.scale(this.facing, 1);
+        ctx.rotate(this.angle);
+
+        const shadowOffset = 4 + this.depthLayer * 2.5;
+        ctx.shadowColor = 'rgba(8, 22, 44, 0.42)';
+        ctx.shadowBlur = 7 + this.depthLayer * 3;
+        ctx.shadowOffsetX = shadowOffset * this.facing;
+        ctx.shadowOffsetY = shadowOffset + 2;
+
+        if (this.depthLayer === 0) {
+          ctx.globalAlpha = 0.86;
+        } else if (this.depthLayer === 1) {
+          ctx.globalAlpha = 0.94;
+        }
+
+        const slices = 12;
+        const srcW = this.img.width;
+        const srcH = this.img.height;
+        const sliceSrcW = srcW / slices;
+        const sliceDstW = this.drawW / slices;
+        const startX = -this.drawW / 2;
+        const startY = -this.drawH / 2;
+
+        for (let i = 0; i < slices; i++) {
+          const tFromHead = 1 - (i / (slices - 1));
+          const waveAmp = (this.boostTimer > 0 ? 7.5 : 4.2) * this.baseScale * (tFromHead * tFromHead);
+          const offsetY = Math.sin(this.phase - tFromHead * 3.1) * waveAmp;
+
+          ctx.drawImage(
+            this.img,
+            i * sliceSrcW,
+            0,
+            sliceSrcW + 0.6,
+            srcH,
+            startX + i * sliceDstW,
+            startY + offsetY,
+            sliceDstW + 0.8,
+            this.drawH
+          );
+        }
+
+        ctx.restore();
+      }
+
+      hitTest(px, py) {
+        const rx = Math.max(34, this.drawW * 0.62);
+        const ry = Math.max(34, this.drawH * 0.62);
+        const dx = (px - this.x) / rx;
+        const dy = (py - this.y) / ry;
+        return (dx * dx + dy * dy) <= 1.15;
+      }
+    }
+
+    /* =====================================================================
+       4. เอ็นจินท้องทะเล Paper-Cut Shadow Box
+       ===================================================================== */
+    class PaperCutOceanEngine {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.width = 0;
+        this.height = 0;
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        this.fishes = [];
+        this.bubbles = [];
+        this.foods = [];
+        this.sparkles = [];
+        this.seaweeds = [];
+        this.corals = [];
+
+        this.featuredIds = new Set();
+        this.nextFeatureSwitchAt = 0;
+
+        this.frameCanvas = document.createElement('canvas');
+        this.frameCtx = this.frameCanvas.getContext('2d');
+        this.paperPattern = this.createPaperGrainPattern();
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      createPaperGrainPattern() {
+        const p = document.createElement('canvas');
+        p.width = 96;
+        p.height = 96;
+        const pctx = p.getContext('2d');
+        for (let i = 0; i < 420; i++) {
+          const x = Math.random() * 96;
+          const y = Math.random() * 96;
+          const a = Math.random() * 0.045;
+          pctx.fillStyle = Math.random() < 0.5 ? `rgba(255,255,255,${a})` : `rgba(14,41,75,${a})`;
+          pctx.fillRect(x, y, 1.5, 1.5);
+        }
+        return this.ctx.createPattern(p, 'repeat');
+      }
+
+      resize() {
+        const w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        const h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+        if (!w || !h || w <= 0 || h <= 0) return;
+
+        this.width = w;
+        this.height = h;
+        this.canvas.width = Math.floor(w * this.dpr);
+        this.canvas.height = Math.floor(h * this.dpr);
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+        this.fishes.forEach((f) => f.recalcSize(w));
+        this.initEnvironmentDecor();
+        this.renderForegroundPaperFrame();
+      }
+
+      initEnvironmentDecor() {
+        const w = this.width;
+        const h = this.height;
+
+        this.seaweeds = [
+          { x: w * 0.07, h: h * 0.34, color: '#217E7D', layer: 0, phase: 0.2, width: 20 },
+          { x: w * 0.14, h: h * 0.28, color: '#39A39E', layer: 1, phase: 1.4, width: 18 },
+          { x: w * 0.24, h: h * 0.22, color: '#1A5E7A', layer: 0, phase: 2.3, width: 15 },
+          { x: w * 0.77, h: h * 0.25, color: '#1A5E7A', layer: 0, phase: 0.9, width: 16 },
+          { x: w * 0.86, h: h * 0.32, color: '#39A39E', layer: 1, phase: 1.9, width: 19 },
+          { x: w * 0.93, h: h * 0.37, color: '#217E7D', layer: 2, phase: 2.8, width: 22 },
+        ];
+
+        const coralScale = w < 640 ? 0.78 : 1.0;
+        this.corals = [
+          { x: w * 0.18, y: h * 0.87, scale: 0.95 * coralScale, color: '#E86F4A', type: 'branch', layer: 1 },
+          { x: w * 0.34, y: h * 0.89, scale: 0.78 * coralScale, color: '#F2A679', type: 'fan', layer: 0 },
+          { x: w * 0.65, y: h * 0.90, scale: 0.82 * coralScale, color: '#5BB8B0', type: 'fan', layer: 0 },
+          { x: w * 0.82, y: h * 0.87, scale: 1.05 * coralScale, color: '#D65A31', type: 'branch', layer: 2 },
+        ];
+
+        if (this.bubbles.length === 0) {
+          for (let i = 0; i < 24; i++) {
+            this.bubbles.push(this.createBubble(true));
+          }
+        }
+      }
+
+      createBubble(randomY = false) {
+        return {
+          x: Math.random() * Math.max(this.width, 320),
+          y: randomY ? Math.random() * Math.max(this.height, 320) : this.height + 15,
+          r: 2.5 + Math.random() * 6,
+          vy: 0.4 + Math.random() * 0.85,
+          wobble: Math.random() * Math.PI * 2,
+          alpha: 0.3 + Math.random() * 0.45,
+        };
+      }
+
+      renderForegroundPaperFrame() {
+        const w = this.width;
+        const h = this.height;
+        if (!w || !h || w <= 0 || h <= 0) return;
+
+        this.frameCanvas.width = Math.floor(w * this.dpr);
+        this.frameCanvas.height = Math.floor(h * this.dpr);
+        const fctx = this.frameCtx;
+        fctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        fctx.clearRect(0, 0, w, h);
+
+        const isMobile = w < 640;
+        const padX = isMobile ? Math.min(w * 0.032, 18) : Math.min(w * 0.045, 42);
+        const padY = isMobile ? Math.min(h * 0.025, 20) : Math.min(h * 0.045, 36);
+
+        fctx.save();
+        fctx.fillStyle = '#7DC7BE';
+        fctx.shadowColor = 'rgba(8, 22, 44, 0.55)';
+        fctx.shadowBlur = 18;
+        fctx.shadowOffsetY = 6;
+        fctx.beginPath();
+        fctx.rect(0, 0, w, h);
+        this.traceOrganicWindowPath(fctx, padX * 1.45, padY * 1.45, w - padX * 2.9, h - padY * 2.9, 1);
+        fctx.fill('evenodd');
+        fctx.restore();
+
+        fctx.save();
+        fctx.fillStyle = '#D8EDE5';
+        fctx.shadowColor = 'rgba(14, 41, 75, 0.5)';
+        fctx.shadowBlur = 16;
+        fctx.shadowOffsetY = 5;
+        fctx.beginPath();
+        fctx.rect(0, 0, w, h);
+        this.traceOrganicWindowPath(fctx, padX * 0.72, padY * 0.72, w - padX * 1.44, h - padY * 1.44, 0);
+        fctx.fill('evenodd');
+
+        fctx.globalCompositeOperation = 'destination-out';
+        const cutouts = [
+          [padX * 0.55, h * 0.24, isMobile ? 3.5 : 5.5],
+          [padX * 0.42, h * 0.29, isMobile ? 2.2 : 3.5],
+          [w - padX * 0.52, h * 0.70, isMobile ? 4 : 6],
+          [w - padX * 0.38, h * 0.65, isMobile ? 2.2 : 3.5],
+        ];
+        cutouts.forEach(([cx, cy, r]) => {
+          fctx.beginPath();
+          fctx.arc(cx, cy, r, 0, Math.PI * 2);
+          fctx.fill();
+        });
+        fctx.restore();
+
+        if (this.paperPattern) {
+          fctx.save();
+          fctx.globalCompositeOperation = 'source-atop';
+          fctx.fillStyle = this.paperPattern;
+          fctx.fillRect(0, 0, w, h);
+          fctx.restore();
+        }
+      }
+
+      traceOrganicWindowPath(ctx, x, y, w, h, variant = 0) {
+        const r = Math.min(w, h) * 0.08;
+        const bump = variant === 0 ? 8 : 14;
+        ctx.moveTo(x + r, y);
+        ctx.bezierCurveTo(x + w * 0.33, y - bump * 0.4, x + w * 0.66, y + bump * 0.7, x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.bezierCurveTo(x + w + bump * 0.4, y + h * 0.35, x + w - bump * 0.6, y + h * 0.68, x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.bezierCurveTo(x + w * 0.66, y + h + bump * 0.4, x + w * 0.33, y + h - bump * 0.6, x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.bezierCurveTo(x - bump * 0.4, y + h * 0.65, x + bump * 0.6, y + h * 0.32, x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      addOrUpdateFish(data, isNewArrival = false) {
+        const existing = this.fishes.find((f) => f.id === data.id);
+        if (existing) {
+          existing.name = data.name || existing.name;
+          existing.author = data.author || existing.author;
+          existing.message = (data.message || '').trim();
+          return existing;
+        }
+        const fish = new OceanFishEntity(data, this.width, this.height, isNewArrival);
+        this.fishes.push(fish);
+
+        if (isNewArrival) {
+          for (let i = 0; i < 14; i++) {
+            this.bubbles.push({
+              x: fish.x + (Math.random() - 0.5) * 60,
+              y: fish.y + (Math.random() - 0.5) * 40,
+              r: 3 + Math.random() * 6,
+              vy: 1.0 + Math.random() * 1.4,
+              wobble: Math.random() * Math.PI * 2,
+              alpha: 0.75,
+            });
+          }
+          for (let i = 0; i < 16; i++) {
+            const ang = (Math.PI * 2 * i) / 16;
+            this.sparkles.push({
+              x: fish.x,
+              y: fish.y,
+              vx: Math.cos(ang) * (1.2 + Math.random() * 2.2),
+              vy: Math.sin(ang) * (1.2 + Math.random() * 2.2),
+              life: 1,
+              size: 3 + Math.random() * 4,
+            });
+          }
+        }
+        return fish;
+      }
+
+      removeFish(id) {
+        this.fishes = this.fishes.filter((f) => f.id !== id);
+        this.featuredIds.delete(id);
+      }
+
+      dropFood(x, y) {
+        for (let i = 0; i < 4; i++) {
+          this.foods.push({
+            x: x + (Math.random() - 0.5) * 26,
+            y: y + (Math.random() - 0.5) * 14,
+            vy: 0.45 + Math.random() * 0.4,
+            r: 3.5 + Math.random() * 2,
+            eaten: false,
+            life: 480,
+          });
+        }
+        sound.playBubblePlop(0.08);
+      }
+
+      callFishToFront(id) {
+        const fish = this.fishes.find((f) => f.id === id);
+        if (!fish) return;
+        fish.targetY = this.height * 0.46;
+        fish.boostTimer = 60;
+        fish.pinnedTimer = 360;
+        if (fish.x < this.width * 0.25) fish.facing = 1;
+        if (fish.x > this.width * 0.75) fish.facing = -1;
+        sound.playBubblePlop(0.12);
+      }
+
+      pickSpreadFeaturedFishes() {
+        const candidates = this.fishes.filter(
+          (f) => f.message && f.x > this.width * 0.08 && f.x < this.width * 0.92
+        );
+        this.featuredIds.clear();
+        if (candidates.length === 0) return;
+
+        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+        const first = shuffled[0];
+        this.featuredIds.add(first.id);
+
+        const wantTwo = candidates.length >= 2 && (this.width >= 640 ? Math.random() < 0.72 : Math.random() < 0.45);
+        if (wantTwo) {
+          let bestSecond = null;
+          let maxDist = 0;
+          const minSpread = Math.min(this.width * 0.35, 220);
+
+          for (let i = 1; i < shuffled.length; i++) {
+            const c = shuffled[i];
+            const d = Math.hypot(c.x - first.x, c.y - first.y);
+            if (d >= minSpread && d > maxDist) {
+              maxDist = d;
+              bestSecond = c;
+            }
+          }
+          if (bestSecond) {
+            this.featuredIds.add(bestSecond.id);
+          }
+        }
+      }
+
+      update(time) {
+        if (this.width <= 0 || this.height <= 0) {
+          this.resize();
+          if (this.width <= 0 || this.height <= 0) return;
+        }
+
+        if (time >= this.nextFeatureSwitchAt) {
+          this.pickSpreadFeaturedFishes();
+          this.nextFeatureSwitchAt = time + 5000 + Math.random() * 2500;
+        }
+
+        for (const f of this.fishes) {
+          f.update(this.width, this.height, this.foods, time);
+          const shouldShow = Boolean(f.message) && (this.featuredIds.has(f.id) || f.pinnedTimer > 0);
+          const targetAlpha = shouldShow ? 1 : 0;
+          f.noteOpacity += (targetAlpha - f.noteOpacity) * 0.075;
+        }
+
+        for (let i = this.bubbles.length - 1; i >= 0; i--) {
+          const b = this.bubbles[i];
+          b.y -= b.vy;
+          b.x += Math.sin(time * 0.002 + b.wobble) * 0.35;
+          if (b.y < -20) {
+            if (this.bubbles.length > 24) {
+              this.bubbles.splice(i, 1);
+            } else {
+              this.bubbles[i] = this.createBubble(false);
+            }
+          }
+        }
+
+        for (let i = this.foods.length - 1; i >= 0; i--) {
+          const fd = this.foods[i];
+          fd.y += fd.vy;
+          fd.x += Math.sin(time * 0.004 + i) * 0.25;
+          fd.life--;
+          if (fd.eaten || fd.life <= 0 || fd.y > this.height * 0.92) {
+            this.foods.splice(i, 1);
+          }
+        }
+
+        for (let i = this.sparkles.length - 1; i >= 0; i--) {
+          const sp = this.sparkles[i];
+          sp.x += sp.vx;
+          sp.y += sp.vy;
+          sp.vx *= 0.96;
+          sp.vy *= 0.96;
+          sp.life -= 0.02;
+          if (sp.life <= 0) this.sparkles.splice(i, 1);
+        }
+      }
+
+      draw(time) {
+        if (this.width <= 0 || this.height <= 0) return;
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, '#5BB8B0');
+        bgGrad.addColorStop(0.24, '#2F98B8');
+        bgGrad.addColorStop(0.58, '#1E6F9F');
+        bgGrad.addColorStop(0.84, '#184E77');
+        bgGrad.addColorStop(1, '#0E294B');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        this.drawSunbeams(ctx, w, h, time);
+        this.drawSurfaceWaves(ctx, w, h, time);
+
+        this.drawSeabedLayer(ctx, w, h, 0.72, '#1A5D88', 22, 0.9);
+        this.drawDecorByLayer(ctx, 0, time);
+        this.fishes.filter((f) => f.depthLayer === 0).forEach((f) => f.drawFish(ctx));
+
+        this.drawSeabedLayer(ctx, w, h, 0.80, '#14446B', 28, 1.8);
+        this.drawDecorByLayer(ctx, 1, time);
+        this.fishes.filter((f) => f.depthLayer === 1).forEach((f) => f.drawFish(ctx));
+
+        this.drawFoodsAndBubbles(ctx);
+        this.fishes.filter((f) => f.depthLayer === 2).forEach((f) => f.drawFish(ctx));
+
+        this.drawSeabedLayer(ctx, w, h, 0.88, '#0E294B', 24, 3.1);
+        this.drawDecorByLayer(ctx, 2, time);
+
+        for (const sp of this.sparkles) {
+          ctx.save();
+          ctx.globalAlpha = sp.life;
+          ctx.fillStyle = '#FAF6EE';
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.size * sp.life, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        if (this.paperPattern) {
+          ctx.save();
+          ctx.fillStyle = this.paperPattern;
+          ctx.fillRect(0, 0, w, h);
+          ctx.restore();
+        }
+
+        if (this.frameCanvas.width > 0 && this.frameCanvas.height > 0) {
+          ctx.drawImage(this.frameCanvas, 0, 0, w, h);
+        }
+
+        this.drawCompactFishMessages(ctx, w, h);
+      }
+
+      drawSunbeams(ctx, w, h, time) {
+        ctx.save();
+        for (let i = 0; i < 4; i++) {
+          const sway = Math.sin(time * 0.0005 + i * 1.4) * 28;
+          const topX = w * (0.2 + i * 0.22) + sway;
+          const beamW = w * 0.09;
+          const grad = ctx.createLinearGradient(topX, 0, topX + 90, h * 0.72);
+          grad.addColorStop(0, 'rgba(216, 237, 229, 0.20)');
+          grad.addColorStop(0.65, 'rgba(91, 184, 176, 0.06)');
+          grad.addColorStop(1, 'rgba(91, 184, 176, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(topX - beamW * 0.4, 0);
+          ctx.lineTo(topX + beamW * 0.4, 0);
+          ctx.lineTo(topX + beamW * 1.4, h * 0.75);
+          ctx.lineTo(topX - beamW * 0.2, h * 0.75);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      drawSurfaceWaves(ctx, w, h, time) {
+        const drawWave = (baseY, amp, freq, speed, color) => {
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.shadowColor = 'rgba(14, 41, 75, 0.25)';
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetY = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(w, 0);
+          ctx.lineTo(w, baseY);
+          for (let x = w; x >= 0; x -= 28) {
+            const y = baseY + Math.sin(x * freq + time * speed) * amp;
+            ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        };
+        drawWave(h * 0.13, 8, 0.011, 0.0014, 'rgba(125, 199, 190, 0.55)');
+        drawWave(h * 0.095, 6, 0.015, -0.0018, 'rgba(182, 227, 219, 0.65)');
+      }
+
+      drawSeabedLayer(ctx, w, h, yRatio, color, amp, seed) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.shadowColor = 'rgba(6, 16, 34, 0.48)';
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = -5;
+
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        const baseY = h * yRatio;
+        for (let x = 0; x <= w + 32; x += 32) {
+          const y = baseY
+            + Math.sin(x * 0.0055 + seed) * amp
+            + Math.cos(x * 0.012 - seed * 1.3) * (amp * 0.45);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawDecorByLayer(ctx, layer, time) {
+        for (const sw of this.seaweeds) {
+          if (sw.layer !== layer) continue;
+          const baseY = this.height * 0.96;
+          const sway = Math.sin(time * 0.0018 + sw.phase) * 16;
+
+          ctx.save();
+          ctx.fillStyle = sw.color;
+          ctx.shadowColor = 'rgba(8, 22, 44, 0.38)';
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetX = 4;
+
+          ctx.beginPath();
+          ctx.moveTo(sw.x - sw.width * 0.45, baseY);
+          ctx.bezierCurveTo(
+            sw.x - sw.width, baseY - sw.h * 0.35,
+            sw.x + sway - sw.width * 0.5, baseY - sw.h * 0.72,
+            sw.x + sway, baseY - sw.h
+          );
+          ctx.bezierCurveTo(
+            sw.x + sway + sw.width * 0.55, baseY - sw.h * 0.68,
+            sw.x + sw.width * 0.9, baseY - sw.h * 0.32,
+            sw.x + sw.width * 0.45, baseY
+          );
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        for (const c of this.corals) {
+          if (c.layer !== layer) continue;
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.fillStyle = c.color;
+          ctx.strokeStyle = c.color;
+          ctx.shadowColor = 'rgba(8, 22, 44, 0.42)';
+          ctx.shadowBlur = 9;
+          ctx.shadowOffsetX = 4;
+          ctx.lineCap = 'round';
+
+          if (c.type === 'branch') {
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.moveTo(0, 40);
+            ctx.quadraticCurveTo(-4, 0, -14, -36);
+            ctx.moveTo(-4, 6);
+            ctx.quadraticCurveTo(16, -12, 26, -34);
+            ctx.moveTo(-7, -12);
+            ctx.quadraticCurveTo(-24, -22, -32, -38);
+            ctx.stroke();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(0, 35);
+            ctx.bezierCurveTo(-38, 12, -46, -24, -18, -32);
+            ctx.quadraticCurveTo(0, -44, 18, -32);
+            ctx.bezierCurveTo(46, -24, 38, 12, 0, 35);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      drawFoodsAndBubbles(ctx) {
+        for (const fd of this.foods) {
+          ctx.save();
+          ctx.fillStyle = '#F6CE64';
+          ctx.strokeStyle = '#D65A31';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(fd.x, fd.y, fd.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        for (const b of this.bubbles) {
+          ctx.save();
+          ctx.globalAlpha = b.alpha;
+          ctx.fillStyle = '#D8EDE5';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      drawCompactFishMessages(ctx, w, h) {
+        const visibleFishes = this.fishes
+          .filter((f) => f.message && f.noteOpacity > 0.03)
+          .sort((a, b) => b.pinnedTimer - a.pinnedTimer || b.noteOpacity - a.noteOpacity)
+          .slice(0, 2);
+
+        if (visibleFishes.length === 0) return;
+
+        const isMobile = w < 640;
+        const placedCards = [];
+        const safePadX = isMobile ? 16 : Math.min(w * 0.06, 52);
+        const topSafeY = isMobile ? 88 : 74;
+        const bottomSafeY = isMobile ? h - 125 : h - 78;
+
+        for (const fish of visibleFishes) {
+          ctx.save();
+          ctx.font = '500 11.5px "Mali", "Prompt", sans-serif';
+
+          const maxTextW = isMobile ? Math.min(156, w * 0.48) : Math.min(168, w * 0.42);
+          const lines = this.wrapTextLines(ctx, `“${fish.message}”`, maxTextW, 2);
+          const lineH = 15.5;
+          const padX = 10;
+          const padY = 7;
+
+          let maxLineW = 0;
+          for (const ln of lines) {
+            maxLineW = Math.max(maxLineW, ctx.measureText(ln).width);
+          }
+
+          ctx.font = '600 10px "Prompt", sans-serif';
+          const headerText = `🐠 ${fish.name}`;
+          const headerW = ctx.measureText(headerText).width;
+
+          const cardW = Math.max(108, Math.min(184, Math.max(maxLineW, headerW) + padX * 2));
+          const cardH = padY * 2 + 14 + lines.length * lineH;
+
+          const fishHalfH = Math.max(22, fish.drawH * 0.52);
+          const gap = 10;
+
+          let cardX = fish.x - cardW / 2;
+          cardX = Math.max(safePadX, Math.min(w - safePadX - cardW, cardX));
+
+          let placeBelow = false;
+          let cardY = fish.y - fishHalfH - gap - cardH;
+          if (cardY < topSafeY) {
+            placeBelow = true;
+            cardY = fish.y + fishHalfH + gap;
+          }
+          if (cardY + cardH > bottomSafeY) {
+            placeBelow = false;
+            cardY = Math.max(topSafeY, fish.y - fishHalfH - gap - cardH);
+          }
+
+          for (const prev of placedCards) {
+            const overlapX = cardX < prev.x + prev.w + 8 && cardX + cardW + 8 > prev.x;
+            const overlapY = cardY < prev.y + prev.h + 8 && cardY + cardH + 8 > prev.y;
+            if (overlapX && overlapY) {
+              if (!placeBelow) {
+                const altY = fish.y + fishHalfH + gap;
+                if (altY + cardH <= bottomSafeY) {
+                  placeBelow = true;
+                  cardY = altY;
+                }
+              } else {
+                const altY = fish.y - fishHalfH - gap - cardH;
+                if (altY >= topSafeY) {
+                  placeBelow = false;
+                  cardY = altY;
+                }
+              }
+            }
+          }
+
+          placedCards.push({ x: cardX, y: cardY, w: cardW, h: cardH });
+
+          const floatOffset = (1 - fish.noteOpacity) * (placeBelow ? 8 : -8);
+          const drawY = cardY + floatOffset;
+
+          ctx.globalAlpha = fish.noteOpacity;
+          ctx.shadowColor = 'rgba(14, 41, 75, 0.32)';
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetY = 4;
+
+          ctx.fillStyle = '#FAF6EE';
+          ctx.strokeStyle = '#CBE6DC';
+          ctx.lineWidth = 1.8;
+
+          this.roundRectPath(ctx, cardX, drawY, cardW, cardH, 12);
+          ctx.fill();
+          ctx.stroke();
+
+          const arrowX = Math.max(cardX + 14, Math.min(cardX + cardW - 14, fish.x));
+          ctx.shadowColor = 'transparent';
+          ctx.fillStyle = '#FAF6EE';
+          ctx.beginPath();
+          if (!placeBelow) {
+            ctx.moveTo(arrowX - 6, drawY + cardH - 1);
+            ctx.lineTo(arrowX + 6, drawY + cardH - 1);
+            ctx.lineTo(arrowX, drawY + cardH + 7);
+          } else {
+            ctx.moveTo(arrowX - 6, drawY + 1);
+            ctx.lineTo(arrowX + 6, drawY + 1);
+            ctx.lineTo(arrowX, drawY - 7);
+          }
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#D65A31';
+          ctx.font = '600 10px "Prompt", sans-serif';
+          ctx.textBaseline = 'top';
+          ctx.fillText(headerText, cardX + padX, drawY + padY);
+
+          ctx.fillStyle = '#142B44';
+          ctx.font = '500 11.5px "Mali", "Prompt", sans-serif';
+          lines.forEach((line, idx) => {
+            ctx.fillText(line, cardX + padX, drawY + padY + 14 + idx * lineH);
+          });
+
+          ctx.restore();
+        }
+      }
+
+      wrapTextLines(ctx, text, maxWidth, maxLines = 2) {
+        const chars = Array.from(text);
+        const lines = [];
+        let current = '';
+
+        for (let i = 0; i < chars.length; i++) {
+          const test = current + chars[i];
+          if (ctx.measureText(test).width > maxWidth && current.length > 0) {
+            lines.push(current);
+            current = chars[i];
+            if (lines.length === maxLines - 1) {
+              let rest = current + chars.slice(i + 1).join('');
+              while (ctx.measureText(rest).width > maxWidth && rest.length > 1) {
+                rest = rest.slice(0, -1);
+              }
+              if (rest.length < (current + chars.slice(i + 1).join('')).length) {
+                rest = rest.slice(0, -1) + '…';
+              }
+              lines.push(rest);
+              return lines;
+            }
+          } else {
+            current = test;
+          }
+        }
+        if (current) lines.push(current);
+        return lines;
+      }
+
+      roundRectPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+    }
+
+    /* =====================================================================
+       5. เตรียมเอ็นจินหลัก + ระบบโหมดออนไลน์เรียลไทม์
+       ===================================================================== */
+    const oceanCanvas = document.getElementById('oceanCanvas');
+    const ocean = new PaperCutOceanEngine(oceanCanvas);
+
+    const liveStatusDot = document.getElementById('liveStatusDot');
+    const liveStatusText = document.getElementById('liveStatusText');
+    const onlineUsersWrap = document.getElementById('onlineUsersWrap');
+    const onlineUsersBadge = document.getElementById('onlineUsersBadge');
+    const reconnectBtn = document.getElementById('reconnectBtn');
+    const fishCountBadge = document.getElementById('fishCountBadge');
+    const rosterSyncNote = document.getElementById('rosterSyncNote');
+    const myUserIdDisplay = document.getElementById('myUserIdDisplay');
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let cloudCollectionRef = null;
+    let presenceCollectionRef = null;
+    let unsubscribeFishes = null;
+    let unsubscribePresence = null;
+    let presenceHeartbeatTimer = null;
+    let isOnlineConnected = false;
+    let initialSnapshotDone = false;
+
+    function updateFishCountUI() {
+      fishCountBadge.textContent = String(ocean.fishes.length);
+    }
+
+    function setSyncStatus(mode, detail = '') {
+      if (mode === 'online') {
+        liveStatusDot.className = 'inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-200 animate-pulse shrink-0';
+        liveStatusText.textContent = 'ออนไลน์';
+        onlineUsersWrap.classList.remove('hidden');
+        onlineUsersWrap.classList.add('inline-flex');
+        reconnectBtn.classList.add('hidden');
+        rosterSyncNote.textContent = '🟢 ออนไลน์เรียลไทม์ — ทุกคนเห็นปลาของกันและกันทันที';
+      } else if (mode === 'connecting') {
+        liveStatusDot.className = 'inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-200 animate-pulse shrink-0';
+        liveStatusText.textContent = 'กำลังเชื่อมต่อ...';
+        onlineUsersWrap.classList.add('hidden');
+        onlineUsersWrap.classList.remove('inline-flex');
+        reconnectBtn.classList.add('hidden');
+        rosterSyncNote.textContent = 'กำลังเชื่อมต่อเซิร์ฟเวอร์ออนไลน์...';
+      } else {
+        liveStatusDot.className = 'inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-rose-400 ring-2 ring-rose-200 shrink-0';
+        liveStatusText.textContent = detail || 'ออฟไลน์';
+        onlineUsersWrap.classList.add('hidden');
+        onlineUsersWrap.classList.remove('inline-flex');
+        reconnectBtn.classList.remove('hidden');
+        rosterSyncNote.textContent = `⚠️ ${detail || 'ไม่สามารถเชื่อมต่อออนไลน์ได้'}`;
+      }
+    }
+
+    function loadSampleFishes() {
+      const samples = createPaperCutOceanSampleFishes();
+      samples.forEach((s) => ocean.addOrUpdateFish(s, false));
+      updateFishCountUI();
+    }
+
+    async function sendPresenceHeartbeat() {
+      if (!currentUser || !presenceCollectionRef) return;
+      try {
+        await setDoc(doc(presenceCollectionRef, currentUser.uid), {
+          uid: currentUser.uid,
+          lastActive: Date.now(),
+        });
+      } catch (e) {
+        console.warn('Presence heartbeat error:', e);
+      }
+    }
+
+    function cleanupOnlineListeners() {
+      if (unsubscribeFishes) {
+        unsubscribeFishes();
+        unsubscribeFishes = null;
+      }
+      if (unsubscribePresence) {
+        unsubscribePresence();
+        unsubscribePresence = null;
+      }
+      if (presenceHeartbeatTimer) {
+        clearInterval(presenceHeartbeatTimer);
+        presenceHeartbeatTimer = null;
+      }
+    }
+
+    async function initRealtimeSync() {
+      if (ocean.fishes.length === 0) {
+        loadSampleFishes();
+      }
+      cleanupOnlineListeners();
+      setSyncStatus('connecting');
+
+      try {
+        const envConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
+          ? __firebase_config
+          : (typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : null);
+
+        const rawConfig = envConfig || CUSTOM_FIREBASE_CONFIG;
+        if (!rawConfig) {
+          isOnlineConnected = false;
+          setSyncStatus('error', 'โหมดออฟไลน์');
+          myUserIdDisplay.textContent = 'ยังไม่ได้ตั้งค่า Firebase';
+          return;
+        }
+
+        const firebaseConfig = typeof rawConfig === 'string' ? JSON.parse(rawConfig) : rawConfig;
+        if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+          isOnlineConnected = false;
+          setSyncStatus('error', 'ค่าตั้งค่าไม่ครบ');
+          myUserIdDisplay.textContent = 'ค่าตั้งค่าไม่สมบูรณ์';
+          return;
+        }
+
+        const appId = (typeof __app_id !== 'undefined' && __app_id)
+          ? __app_id
+          : (typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'papercut-aquarium-app');
+
+        const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (!auth.currentUser) {
+          const initialToken = (typeof __initial_auth_token !== 'undefined' && __initial_auth_token)
+            ? __initial_auth_token
+            : (typeof window !== 'undefined' && window.__initial_auth_token ? window.__initial_auth_token : null);
+
+          if (initialToken) {
+            try {
+              const cred = await signInWithCustomToken(auth, initialToken);
+              currentUser = cred.user;
+            } catch (tokenErr) {
+              const cred = await signInAnonymously(auth);
+              currentUser = cred.user;
+            }
+          } else {
+            const cred = await signInAnonymously(auth);
+            currentUser = cred.user;
+          }
+        } else {
+          currentUser = auth.currentUser;
+        }
+
+        if (!currentUser) {
+          isOnlineConnected = false;
+          setSyncStatus('error', 'ยืนยันตัวตนไม่สำเร็จ');
+          return;
+        }
+
+        myUserIdDisplay.textContent = currentUser.uid;
+        cloudCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'aquarium_fishes');
+        presenceCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'aquarium_presence');
+
+        isOnlineConnected = true;
+        setSyncStatus('online');
+
+        unsubscribeFishes = onSnapshot(cloudCollectionRef, (snapshot) => {
+          if (!currentUser) return;
+          snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const docId = data.id || change.doc.id;
+            if (change.type === 'added' || change.type === 'modified') {
+              const alreadyExists = ocean.fishes.some((f) => f.id === docId);
+              const isNewFromOnline = initialSnapshotDone && change.type === 'added' && !alreadyExists;
+              ocean.addOrUpdateFish({ ...data, id: docId }, isNewFromOnline);
+              if (isNewFromOnline) {
+                showWelcomeBanner(data.name, data.author, data.message);
+                sound.playReleaseSplash();
+                if (data.createdBy && data.createdBy !== currentUser.uid) {
+                  showToast(`🌊 ${data.author || 'ผู้เข้าชม'} เพิ่งปล่อย "${data.name}"!`);
+                }
+              }
+            } else if (change.type === 'removed') {
+              ocean.removeFish(docId);
+            }
+          });
+          initialSnapshotDone = true;
+          updateFishCountUI();
+          if (!rosterModal.classList.contains('hidden')) {
+            renderRoster();
+          }
+        }, (error) => {
+          isOnlineConnected = false;
+          setSyncStatus('error', error?.code === 'permission-denied' ? 'ไม่มีสิทธิ์เข้าถึง' : 'ซิงก์ขัดข้อง');
+        });
+
+        await sendPresenceHeartbeat();
+        presenceHeartbeatTimer = setInterval(sendPresenceHeartbeat, 25000);
+
+        unsubscribePresence = onSnapshot(presenceCollectionRef, (snapshot) => {
+          if (!currentUser) return;
+          const now = Date.now();
+          let activeCount = 0;
+          snapshot.forEach((d) => {
+            const p = d.data();
+            if (p && typeof p.lastActive === 'number' && (now - p.lastActive) < 75000) {
+              activeCount++;
+            }
+          });
+          onlineUsersBadge.textContent = String(Math.max(1, activeCount));
+        });
+      } catch (err) {
+        isOnlineConnected = false;
+        setSyncStatus('error', 'เชื่อมต่อไม่สำเร็จ');
+      }
+    }
+
+    reconnectBtn.addEventListener('click', () => initRealtimeSync());
+
+    window.addEventListener('pagehide', () => {
+      if (currentUser && presenceCollectionRef) {
+        deleteDoc(doc(presenceCollectionRef, currentUser.uid)).catch(() => {});
+      }
+    });
+
+    async function publishFishToCloud(fishData) {
+      if (!currentUser || !isOnlineConnected || !cloudCollectionRef) {
+        return false;
+      }
+      try {
+        await setDoc(doc(cloudCollectionRef, fishData.id), fishData);
+        return true;
+      } catch (e) {
+        showToast('⚠️ ส่งปลาขึ้นระบบออนไลน์ไม่สำเร็จ');
+        return false;
+      }
+    }
+
+    async function deleteFishFromCloud(fishId) {
+      if (!currentUser || !isOnlineConnected || !cloudCollectionRef) return;
+      try {
+        await deleteDoc(doc(cloudCollectionRef, fishId));
+      } catch (e) {}
+    }
+
+    /* =====================================================================
+       6. การโต้ตอบบนหน้าจอท้องทะเล + แบนเนอร์แจ้งเตือน
+       ===================================================================== */
+    const welcomeBanner = document.getElementById('welcomeBanner');
+    const welcomeBannerText = document.getElementById('welcomeBannerText');
+    const welcomeBannerMsg = document.getElementById('welcomeBannerMsg');
+    let welcomeTimer = null;
+
+    function showWelcomeBanner(name, author, message) {
+      welcomeBannerText.textContent = `"${name}" โดย ${author}`;
+      welcomeBannerMsg.textContent = message ? `“${message}”` : 'ว่ายลงสู่อควาเรียมอย่างมีความสุข!';
+      welcomeBanner.classList.remove('opacity-0', 'scale-95');
+      welcomeBanner.classList.add('opacity-100', 'scale-100');
+      clearTimeout(welcomeTimer);
+      welcomeTimer = setTimeout(() => {
+        welcomeBanner.classList.remove('opacity-100', 'scale-100');
+        welcomeBanner.classList.add('opacity-0', 'scale-95');
+      }, 4000);
+    }
+
+    const toastMessage = document.getElementById('toastMessage');
+    const toastInner = document.getElementById('toastInner');
+    let toastTimer = null;
+
+    function showToast(text) {
+      toastInner.textContent = text;
+      toastMessage.classList.remove('opacity-0');
+      toastMessage.classList.add('opacity-100');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastMessage.classList.remove('opacity-100');
+        toastMessage.classList.add('opacity-0');
+      }, 2600);
+    }
+
+    oceanCanvas.addEventListener('pointerdown', (e) => {
+      const rect = oceanCanvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+
+      const sorted = [...ocean.fishes].sort((a, b) => b.depthLayer - a.depthLayer);
+      for (const f of sorted) {
+        if (f.hitTest(px, py)) {
+          f.greet(true);
+          showToast(`🐠 ${f.name} (โดย ${f.author})`);
+          return;
+        }
+      }
+
+      ocean.dropFood(px, py);
+    });
+
+    /* =====================================================================
+       7. ปุ่มควบคุม HUD (เสียง, โหมดนิทรรศการ, สมุดปลา)
+       ===================================================================== */
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const soundIconOff = document.getElementById('soundIconOff');
+    const soundIconOn = document.getElementById('soundIconOn');
+
+    soundToggleBtn.addEventListener('click', () => {
+      const on = sound.toggle();
+      soundIconOff.classList.toggle('hidden', on);
+      soundIconOff.classList.toggle('flex', !on);
+      soundIconOn.classList.toggle('hidden', !on);
+      soundIconOn.classList.toggle('flex', on);
+      showToast(on ? '🔊 เปิดเสียงใต้น้ำแล้ว' : '🔇 ปิดเสียงแล้ว');
+    });
+
+    const exhibitionBtn = document.getElementById('exhibitionBtn');
+    const exitExhibitionBtn = document.getElementById('exitExhibitionBtn');
+
+    exhibitionBtn.addEventListener('click', () => {
+      document.body.classList.add('exhibition-mode');
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    });
+
+    exitExhibitionBtn.addEventListener('click', () => {
+      document.body.classList.remove('exhibition-mode');
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    const rosterBtn = document.getElementById('rosterBtn');
+    const rosterModal = document.getElementById('rosterModal');
+    const closeRosterBtn = document.getElementById('closeRosterBtn');
+    const rosterList = document.getElementById('rosterList');
+    const rosterTotalText = document.getElementById('rosterTotalText');
+
+    function renderRoster() {
+      rosterList.innerHTML = '';
+      rosterTotalText.textContent = `ทั้งหมด ${ocean.fishes.length} ตัว`;
+
+      const sorted = [...ocean.fishes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      sorted.forEach((fish) => {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl p-3 border-2 border-[#CBE6DC] flex items-center gap-3 active:scale-[0.99] transition cursor-pointer';
+        card.innerHTML = `
+          <div class="w-14 h-11 rounded-xl preview-ocean-bg flex items-center justify-center p-1 shrink-0">
+            <img src="${fish.imageData}" alt="${fish.name}" class="max-w-full max-h-full object-contain" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-display font-bold text-sm text-[#142B44] truncate">${fish.name}</span>
+              <span class="text-[11px] text-[#1E6F9F] truncate">• ${fish.author}</span>
+            </div>
+            <p class="font-hand text-xs text-[#184E77] mt-0.5 truncate">${fish.message ? `“${fish.message}”` : 'กำลังว่ายน้ำอย่างมีความสุข'}</p>
+          </div>
+          ${!fish.isSample ? `
+            <button type="button" class="del-fish-btn p-2.5 rounded-xl text-[#B83B1A] hover:bg-[#FFE5DC] transition cursor-pointer shrink-0" title="นำปลานี้ออก">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          ` : ''}
+        `;
+
+        card.addEventListener('click', (ev) => {
+          if (ev.target.closest('.del-fish-btn')) return;
+          rosterModal.classList.add('hidden');
+          rosterModal.classList.remove('flex');
+          ocean.callFishToFront(fish.id);
+          showToast(`เรียก "${fish.name}" ว่ายมาทักทายแล้ว!`);
+        });
+
+        const delBtn = card.querySelector('.del-fish-btn');
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            ocean.removeFish(fish.id);
+            updateFishCountUI();
+            renderRoster();
+            await deleteFishFromCloud(fish.id);
+            showToast(`นำ "${fish.name}" ออกจากอควาเรียมแล้ว`);
+          });
+        }
+
+        rosterList.appendChild(card);
+      });
+    }
+
+    rosterBtn.addEventListener('click', () => {
+      renderRoster();
+      rosterModal.classList.remove('hidden');
+      rosterModal.classList.add('flex');
+    });
+
+    closeRosterBtn.addEventListener('click', () => {
+      rosterModal.classList.add('hidden');
+      rosterModal.classList.remove('flex');
+    });
+
+    /* =====================================================================
+       8. MODAL สแกน / อัปโหลด / วาดบนหน้าจอ
+       ===================================================================== */
+    const openScannerBtn = document.getElementById('openScannerBtn');
+    const scannerModal = document.getElementById('scannerModal');
+    const closeScannerBtn = document.getElementById('closeScannerBtn');
+    const stepCapture = document.getElementById('stepCapture');
+    const stepProcess = document.getElementById('stepProcess');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panelCamera = document.getElementById('panelCamera');
+    const panelUpload = document.getElementById('panelUpload');
+    const panelDraw = document.getElementById('panelDraw');
+
+    let activeTab = 'camera';
+    let cameraStream = null;
+    let currentFacingMode = 'environment';
+
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraStartOverlay = document.getElementById('cameraStartOverlay');
+    const cameraGuideOverlay = document.getElementById('cameraGuideOverlay');
+    const cameraErrorBox = document.getElementById('cameraErrorBox');
+    const cameraErrorTitle = document.getElementById('cameraErrorTitle');
+    const cameraErrorText = document.getElementById('cameraErrorText');
+    const liveCameraControls = document.getElementById('liveCameraControls');
+    const requestCameraBtn = document.getElementById('requestCameraBtn');
+    const requestCameraBtnText = document.getElementById('requestCameraBtnText');
+    const retryCameraBtn = document.getElementById('retryCameraBtn');
+    const flipCameraBtn = document.getElementById('flipCameraBtn');
+    const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+    const nativeCameraInput = document.getElementById('nativeCameraInput');
+    const fileUploadInput = document.getElementById('fileUploadInput');
+
+    function openScannerModal() {
+      scannerModal.classList.remove('hidden');
+      scannerModal.classList.add('flex');
+      showStepCapture();
+      switchTab(activeTab);
+    }
+
+    function closeScannerModal() {
+      stopCamera();
+      scannerModal.classList.add('hidden');
+      scannerModal.classList.remove('flex');
+    }
+
+    function showStepCapture() {
+      stepCapture.classList.remove('hidden');
+      stepProcess.classList.add('hidden');
+      modalTitle.textContent = 'ปล่อยปลาลงสู่อควาเรียม';
+      modalSubtitle.textContent = 'สแกนภาพวาดจากกระดาษ อัปโหลดรูป หรือวาดบนหน้าจอ';
+    }
+
+    function showStepProcess(sourceCanvas) {
+      stopCamera();
+      rawCapturedCanvas = sourceCanvas;
+      flipHorizontal = false;
+      stepCapture.classList.add('hidden');
+      stepProcess.classList.remove('hidden');
+      modalTitle.textContent = 'ตัดพื้นหลังและฝากข้อความ';
+      modalSubtitle.textContent = 'น้องปลาจะผลัดกันแสดงข้อความให้ทุกคนอ่าน';
+      updateProcessedPreview();
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      tabBtns.forEach((btn) => {
+        const isActive = btn.dataset.tab === tab;
+        btn.classList.toggle('bg-[#2F98B8]', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('font-semibold', isActive);
+        btn.classList.toggle('shadow-[0_2px_0_#184E77]', isActive);
+        btn.classList.toggle('text-[#142B44]', !isActive);
+      });
+
+      panelCamera.classList.toggle('hidden', tab !== 'camera');
+      panelUpload.classList.toggle('hidden', tab !== 'upload');
+      panelDraw.classList.toggle('hidden', tab !== 'draw');
+
+      if (tab !== 'camera') stopCamera();
+      if (tab === 'draw') resizeDrawCanvas();
+    }
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    openScannerBtn.addEventListener('click', openScannerModal);
+    closeScannerBtn.addEventListener('click', closeScannerModal);
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+        cameraStream = null;
+      }
+      cameraVideo.srcObject = null;
+      cameraGuideOverlay.classList.add('hidden');
+      cameraGuideOverlay.classList.remove('flex');
+      liveCameraControls.classList.add('hidden');
+      liveCameraControls.classList.remove('flex');
+      cameraStartOverlay.classList.remove('hidden');
+      cameraErrorBox.classList.add('hidden');
+      cameraErrorBox.classList.remove('flex');
+    }
+
+    function showCameraError(title, msg) {
+      cameraStartOverlay.classList.add('hidden');
+      cameraGuideOverlay.classList.add('hidden');
+      liveCameraControls.classList.add('hidden');
+      cameraErrorTitle.textContent = title;
+      cameraErrorText.textContent = msg;
+      cameraErrorBox.classList.remove('hidden');
+      cameraErrorBox.classList.add('flex');
+    }
+
+    async function startCamera(facingMode = currentFacingMode) {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+        cameraStream = null;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showCameraError(
+          'เบราว์เซอร์ไม่รองรับกล้องสดในหน้านี้',
+          'กรุณากดปุ่ม "📸 ถ่ายรูปด้วยกล้องมือถือโดยตรง" ด้านบนแทนครับ'
+        );
+        return;
+      }
+
+      requestCameraBtnText.textContent = 'กำลังเปิดกล้อง...';
+      cameraErrorBox.classList.add('hidden');
+
+      const constraintCandidates = [
+        { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false },
+        { video: { facingMode }, audio: false },
+        { video: true, audio: false },
+      ];
+
+      let lastErr = null;
+      for (const constraints of constraintCandidates) {
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) break;
+        }
+      }
+
+      requestCameraBtnText.textContent = 'เปิดกล้องสแกนสด';
+
+      if (!cameraStream) {
+        const name = lastErr ? lastErr.name : '';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          showCameraError('ยังไม่ได้อนุญาตสิทธิ์กล้อง', 'กรุณากดปุ่ม "📸 ถ่ายรูปด้วยกล้องมือถือโดยตรง" ด้านบนได้เลยครับ');
+        } else {
+          showCameraError('ไม่สามารถเปิดกล้องสดได้', 'กรุณากดปุ่ม "📸 ถ่ายรูปด้วยกล้องมือถือโดยตรง" ด้านบนเพื่อถ่ายภาพวาดปลาครับ');
+        }
+        return;
+      }
+
+      cameraVideo.srcObject = cameraStream;
+      cameraVideo.setAttribute('playsinline', 'true');
+      cameraVideo.setAttribute('webkit-playsinline', 'true');
+      cameraVideo.muted = true;
+
+      try {
+        await cameraVideo.play();
+      } catch (e) {}
+
+      cameraStartOverlay.classList.add('hidden');
+      cameraErrorBox.classList.add('hidden');
+      cameraGuideOverlay.classList.remove('hidden');
+      cameraGuideOverlay.classList.add('flex');
+      liveCameraControls.classList.remove('hidden');
+      liveCameraControls.classList.add('flex');
+    }
+
+    requestCameraBtn.addEventListener('click', () => startCamera(currentFacingMode));
+    retryCameraBtn.addEventListener('click', () => startCamera(currentFacingMode));
+    flipCameraBtn.addEventListener('click', () => {
+      currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+      startCamera(currentFacingMode);
+    });
+
+    capturePhotoBtn.addEventListener('click', () => {
+      if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) return;
+      const c = document.createElement('canvas');
+      const maxDim = 900;
+      const scale = Math.min(1, maxDim / Math.max(cameraVideo.videoWidth, cameraVideo.videoHeight));
+      c.width = Math.round(cameraVideo.videoWidth * scale);
+      c.height = Math.round(cameraVideo.videoHeight * scale);
+      c.getContext('2d').drawImage(cameraVideo, 0, 0, c.width, c.height);
+      showStepProcess(c);
+    });
+
+    async function handleImageFile(file) {
+      if (!file) return;
+      try {
+        let bmp = null;
+        if (window.createImageBitmap) {
+          bmp = await createImageBitmap(file);
+        }
+        const c = document.createElement('canvas');
+        const maxDim = 900;
+
+        if (bmp) {
+          const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+          c.width = Math.max(1, Math.round(bmp.width * scale));
+          c.height = Math.max(1, Math.round(bmp.height * scale));
+          c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+          if (bmp.close) bmp.close();
+          showStepProcess(c);
+        } else {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            c.width = Math.max(1, Math.round(img.width * scale));
+            c.height = Math.max(1, Math.round(img.height * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(url);
+            showStepProcess(c);
+          };
+          img.src = url;
+        }
+      } catch (e) {
+        showToast('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้ กรุณาลองใหม่อีกครั้ง');
+      }
+    }
+
+    nativeCameraInput.addEventListener('change', (e) => {
+      handleImageFile(e.target.files[0]);
+      e.target.value = '';
+    });
+
+    fileUploadInput.addEventListener('change', (e) => {
+      handleImageFile(e.target.files[0]);
+      e.target.value = '';
+    });
+
+    /* =====================================================================
+       9. กระดานวาดรูปบนหน้าจอ (ปุ่มสีใหญ่ขึ้นสำหรับมือถือ)
+       ===================================================================== */
+    const drawCanvas = document.getElementById('drawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    const colorPalette = document.getElementById('colorPalette');
+    const brushSizeSlider = document.getElementById('brushSizeSlider');
+    const eraserBtn = document.getElementById('eraserBtn');
+    const undoDrawBtn = document.getElementById('undoDrawBtn');
+    const clearDrawBtn = document.getElementById('clearDrawBtn');
+    const toggleGuideCheck = document.getElementById('toggleGuideCheck');
+    const drawGuideSvg = document.getElementById('drawGuideSvg');
+    const useDrawingBtn = document.getElementById('useDrawingBtn');
+
+    const paletteColors = ['#E86F4A', '#F4C95D', '#2F98B8', '#5BB8B0', '#142B44', '#D65A31', '#E88DA6', '#7A63B5'];
+    let currentDrawColor = paletteColors[0];
+    let isEraser = false;
+    let isDrawing = false;
+    let drawHistory = [];
+    let drawInitialized = false;
+
+    paletteColors.forEach((hex, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 transition cursor-pointer shrink-0 ${idx === 0 ? 'border-[#142B44] scale-110' : 'border-white'}`;
+      btn.style.backgroundColor = hex;
+      btn.addEventListener('click', () => {
+        currentDrawColor = hex;
+        isEraser = false;
+        eraserBtn.classList.remove('bg-[#2F98B8]', 'text-white');
+        colorPalette.querySelectorAll('button').forEach((b) => {
+          b.classList.remove('border-[#142B44]', 'scale-110');
+          b.classList.add('border-white');
+        });
+        btn.classList.remove('border-white');
+        btn.classList.add('border-[#142B44]', 'scale-110');
+      });
+      colorPalette.appendChild(btn);
+    });
+
+    function resizeDrawCanvas() {
+      if (drawInitialized) return;
+      drawCanvas.width = 640;
+      drawCanvas.height = 480;
+      drawCtx.fillStyle = '#FFFFFF';
+      drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+      drawHistory = [drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height)];
+      drawInitialized = true;
+    }
+
+    function getDrawPoint(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      return {
+        x: ((e.clientX - rect.left) / rect.width) * drawCanvas.width,
+        y: ((e.clientY - rect.top) / rect.height) * drawCanvas.height,
+      };
+    }
+
+    drawCanvas.addEventListener('pointerdown', (e) => {
+      resizeDrawCanvas();
+      isDrawing = true;
+      drawCanvas.setPointerCapture(e.pointerId);
+      const pt = getDrawPoint(e);
+      drawCtx.beginPath();
+      drawCtx.moveTo(pt.x, pt.y);
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.strokeStyle = isEraser ? '#FFFFFF' : currentDrawColor;
+      drawCtx.lineWidth = Number(brushSizeSlider.value) * (isEraser ? 1.8 : 1);
+    });
+
+    drawCanvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return;
+      const pt = getDrawPoint(e);
+      drawCtx.lineTo(pt.x, pt.y);
+      drawCtx.stroke();
+    });
+
+    const endStroke = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      drawHistory.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      if (drawHistory.length > 20) drawHistory.shift();
+    };
+    drawCanvas.addEventListener('pointerup', endStroke);
+    drawCanvas.addEventListener('pointercancel', endStroke);
+
+    eraserBtn.addEventListener('click', () => {
+      isEraser = !isEraser;
+      eraserBtn.classList.toggle('bg-[#2F98B8]', isEraser);
+      eraserBtn.classList.toggle('text-white', isEraser);
+    });
+
+    undoDrawBtn.addEventListener('click', () => {
+      if (drawHistory.length > 1) {
+        drawHistory.pop();
+        drawCtx.putImageData(drawHistory[drawHistory.length - 1], 0, 0);
+      }
+    });
+
+    clearDrawBtn.addEventListener('click', () => {
+      resizeDrawCanvas();
+      drawCtx.fillStyle = '#FFFFFF';
+      drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+      drawHistory.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+    });
+
+    toggleGuideCheck.addEventListener('change', () => {
+      drawGuideSvg.classList.toggle('hidden', !toggleGuideCheck.checked);
+    });
+
+    useDrawingBtn.addEventListener('click', () => {
+      resizeDrawCanvas();
+      const copy = document.createElement('canvas');
+      copy.width = drawCanvas.width;
+      copy.height = drawCanvas.height;
+      copy.getContext('2d').drawImage(drawCanvas, 0, 0);
+      showStepProcess(copy);
+    });
+
+    /* =====================================================================
+       10. ระบบตัดพื้นหลังกระดาษสีขาวอัตโนมัติ และปล่อยปลา
+       ===================================================================== */
+    const previewCanvas = document.getElementById('previewCanvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    const thresholdSlider = document.getElementById('thresholdSlider');
+    const thresholdValueLabel = document.getElementById('thresholdValueLabel');
+    const keepInnerWhiteCheck = document.getElementById('keepInnerWhiteCheck');
+    const flipFishBtn = document.getElementById('flipFishBtn');
+    const backToCaptureBtn = document.getElementById('backToCaptureBtn');
+    const fishMessageInput = document.getElementById('fishMessageInput');
+    const msgCharCount = document.getElementById('msgCharCount');
+    const sizeOptionBtns = document.querySelectorAll('.size-option-btn');
+    const releaseFishBtn = document.getElementById('releaseFishBtn');
+    const releaseBtnLabel = document.getElementById('releaseBtnLabel');
+
+    let rawCapturedCanvas = null;
+    let processedFishCanvas = null;
+    let flipHorizontal = false;
+    let selectedFishSize = 'medium';
+
+    function removeWhitePaperBackground(srcCanvas, threshold, keepInnerWhite, flipX) {
+      if (!srcCanvas || srcCanvas.width <= 0 || srcCanvas.height <= 0) return null;
+
+      const maxDim = 420;
+      const scale = Math.min(1, maxDim / Math.max(srcCanvas.width, srcCanvas.height));
+      const w = Math.max(1, Math.round(srcCanvas.width * scale));
+      const h = Math.max(1, Math.round(srcCanvas.height * scale));
+
+      const temp = document.createElement('canvas');
+      temp.width = w;
+      temp.height = h;
+      const tctx = temp.getContext('2d');
+      if (flipX) {
+        tctx.translate(w, 0);
+        tctx.scale(-1, 1);
+      }
+      tctx.drawImage(srcCanvas, 0, 0, w, h);
+
+      const imgData = tctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      const corners = [
+        [2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3]
+      ];
+      let bgR = 0, bgG = 0, bgB = 0;
+      corners.forEach(([cx, cy]) => {
+        const idx = (Math.max(0, cy) * w + Math.max(0, cx)) * 4;
+        bgR += data[idx];
+        bgG += data[idx + 1];
+        bgB += data[idx + 2];
+      });
+      bgR /= 4; bgG /= 4; bgB /= 4;
+
+      const distLimit = threshold * 2.4;
+      const isPaperPixel = (idx) => {
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+        const dr = r - bgR, dg = g - bgG, db = b - bgB;
+        const distBg = Math.sqrt(dr * dr + dg * dg + db * db);
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        const sat = Math.max(r, g, b) - Math.min(r, g, b);
+        return (distBg < distLimit && sat < 48) || (lum > 255 - threshold * 0.95 && sat < 32);
+      };
+
+      if (keepInnerWhite) {
+        const visited = new Uint8Array(w * h);
+        const queue = new Int32Array(w * h);
+        let head = 0, tail = 0;
+
+        const enqueue = (x, y) => {
+          const p = y * w + x;
+          if (!visited[p] && isPaperPixel(p * 4)) {
+            visited[p] = 1;
+            queue[tail++] = p;
+          }
+        };
+
+        for (let x = 0; x < w; x++) {
+          enqueue(x, 0);
+          enqueue(x, h - 1);
+        }
+        for (let y = 0; y < h; y++) {
+          enqueue(0, y);
+          enqueue(w - 1, y);
+        }
+
+        while (head < tail) {
+          const p = queue[head++];
+          const px = p % w;
+          const py = (p - px) / w;
+          data[p * 4 + 3] = 0;
+
+          if (px > 0) enqueue(px - 1, py);
+          if (px < w - 1) enqueue(px + 1, py);
+          if (py > 0) enqueue(px, py - 1);
+          if (py < h - 1) enqueue(px, py + 1);
+        }
+      } else {
+        for (let i = 0; i < data.length; i += 4) {
+          if (isPaperPixel(i)) data[i + 3] = 0;
+        }
+      }
+
+      tctx.putImageData(imgData, 0, 0);
+
+      let minX = w, minY = h, maxX = 0, maxY = 0;
+      let foundOpaque = false;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 20) {
+            foundOpaque = true;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (!foundOpaque) return temp;
+
+      const pad = 8;
+      const sx = Math.max(0, minX - pad);
+      const sy = Math.max(0, minY - pad);
+      const sw = Math.min(w - sx, (maxX - minX) + pad * 2);
+      const sh = Math.min(h - sy, (maxY - minY) + pad * 2);
+
+      const cropped = document.createElement('canvas');
+      const finalMax = 300;
+      const finalScale = Math.min(1, finalMax / Math.max(sw, sh));
+      cropped.width = Math.max(1, Math.round(sw * finalScale));
+      cropped.height = Math.max(1, Math.round(sh * finalScale));
+      cropped.getContext('2d').drawImage(temp, sx, sy, sw, sh, 0, 0, cropped.width, cropped.height);
+      return cropped;
+    }
+
+    function updateProcessedPreview() {
+      if (!rawCapturedCanvas) return;
+      const th = Number(thresholdSlider.value);
+      thresholdValueLabel.textContent = String(th);
+
+      processedFishCanvas = removeWhitePaperBackground(
+        rawCapturedCanvas,
+        th,
+        keepInnerWhiteCheck.checked,
+        flipHorizontal
+      );
+
+      if (!processedFishCanvas || processedFishCanvas.width <= 0 || processedFishCanvas.height <= 0) return;
+
+      previewCanvas.width = processedFishCanvas.width;
+      previewCanvas.height = processedFishCanvas.height;
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      previewCtx.drawImage(processedFishCanvas, 0, 0);
+    }
+
+    thresholdSlider.addEventListener('input', updateProcessedPreview);
+    keepInnerWhiteCheck.addEventListener('change', updateProcessedPreview);
+    flipFishBtn.addEventListener('click', () => {
+      flipHorizontal = !flipHorizontal;
+      updateProcessedPreview();
+    });
+
+    backToCaptureBtn.addEventListener('click', () => {
+      showStepCapture();
+      switchTab(activeTab);
+    });
+
+    fishMessageInput.addEventListener('input', () => {
+      msgCharCount.textContent = `${fishMessageInput.value.length}/100`;
+    });
+
+    sizeOptionBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedFishSize = btn.dataset.size;
+        sizeOptionBtns.forEach((b) => {
+          const active = b.dataset.size === selectedFishSize;
+          b.classList.toggle('bg-[#2F98B8]', active);
+          b.classList.toggle('border-[#184E77]', active);
+          b.classList.toggle('text-white', active);
+          b.classList.toggle('font-semibold', active);
+          b.classList.toggle('bg-white', !active);
+          b.classList.toggle('border-[#CBE6DC]', !active);
+          b.classList.toggle('text-[#142B44]', !active);
+        });
+      });
+    });
+
+    function exportCompactFishImage(canvas) {
+      const maxDim = 260;
+      const scale = Math.min(1, maxDim / Math.max(canvas.width, canvas.height));
+      const out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(canvas.width * scale));
+      out.height = Math.max(1, Math.round(canvas.height * scale));
+      out.getContext('2d').drawImage(canvas, 0, 0, out.width, out.height);
+
+      const webpUrl = out.toDataURL('image/webp', 0.84);
+      if (webpUrl && webpUrl.startsWith('data:image/webp')) {
+        return webpUrl;
+      }
+      return out.toDataURL('image/png');
+    }
+
+    releaseFishBtn.addEventListener('click', async () => {
+      if (!processedFishCanvas) return;
+
+      releaseFishBtn.disabled = true;
+      releaseBtnLabel.textContent = 'กำลังปล่อยปลา...';
+
+      const nameInput = document.getElementById('fishNameInput');
+      const artistInput = document.getElementById('artistNameInput');
+
+      const fishData = {
+        id: 'fish_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        name: nameInput.value.trim() || 'น้องปลาตัวใหม่',
+        author: artistInput.value.trim() || 'ผู้เข้าชมนิทรรศการ',
+        message: fishMessageInput.value.trim(),
+        size: selectedFishSize,
+        depthLayer: Math.floor(Math.random() * 3),
+        imageData: exportCompactFishImage(processedFishCanvas),
+        isSample: false,
+        createdBy: currentUser ? currentUser.uid : 'guest',
+        createdAt: Date.now(),
+      };
+
+      ocean.addOrUpdateFish(fishData, true);
+      updateFishCountUI();
+      showWelcomeBanner(fishData.name, fishData.author, fishData.message);
+      sound.playReleaseSplash();
+
+      const synced = await publishFishToCloud(fishData);
+      if (synced) {
+        showToast('🟢 ปล่อยปลาขึ้นอควาเรียมออนไลน์แล้ว!');
+      }
+
+      nameInput.value = '';
+      fishMessageInput.value = '';
+      msgCharCount.textContent = '0/100';
+
+      releaseFishBtn.disabled = false;
+      releaseBtnLabel.textContent = '🌊 ปล่อยปลาลงสู่อควาเรียม!';
+      closeScannerModal();
+    });
+
+    /* =====================================================================
+       11. เริ่มลูปแอนิเมชันเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
+       ===================================================================== */
+    function animate(time) {
+      ocean.update(time);
+      ocean.draw(time);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('load', () => {
+      ocean.resize();
+      initRealtimeSync();
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
